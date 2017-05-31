@@ -19,3 +19,4 @@ if __name__=='__main__':
 
     sub=tf.sub(x, a)
     print sub.eval()
+    print sess.run(sub)
