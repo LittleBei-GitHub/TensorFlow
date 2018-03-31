@@ -53,6 +53,6 @@ if __name__=='__main__':
         with tf.Session() as sess:
             sess.run(init)
             for epoch in range(100):
-                loss, _=sess.run((loss, train), feed_dict={X:x_train, Y:y_train})
+                loss, _=sess.run(fetches=[loss, train], feed_dict={X:x_train, Y:y_train})
                 if epoch%10==0:
                     print('loss:',loss)
