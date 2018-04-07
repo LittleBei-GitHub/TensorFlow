@@ -1,7 +1,8 @@
 #coding=utf-8
 
-## version1.2
-## 卷积滤波器核的数量与网络性能之间的关系
+## version1.4
+## 增加dropout
+
 ## 实现简单卷积神经网络对MNIST数据集进行分类
 ## conv2d + activation + pool + fc
 import csv
@@ -13,9 +14,12 @@ learning_rate_init = 0.001
 training_epochs = 1
 batch_size = 100
 display_step = 10
+keep_prob_init = 1.0#(最小0.0（不能等于0.0），最大1.0)(越小正则化越高)
+
 # Network Parameters
 n_input = 784 # MNIST data input (img shape: 28*28)
 n_classes = 10 # MNIST total classes (0-9 digits)
+
 #根据指定的维数返回初始化好的指定名称的权重 Variable
 def WeightsVariable(shape, name_str, stddev=0.1):
     initial = tf.random_normal(shape=shape, stddev=stddev, dtype=tf.float32)
@@ -87,7 +91,7 @@ with tf.Graph().as_default():
     with tf.name_scope('Inference'):
         # 第一个卷积层(conv2d + biase)(studyai.com)
         with tf.name_scope('Conv2d'):
-            conv1_kernels_num = 5 # 将kernel抽取出作参数，便于观测不同kernel与准确率之间的关系
+            conv1_kernels_num = 1
             weights = WeightsVariable(shape=[5, 5, 1, conv1_kernels_num], name_str='weights')
             biases = BiasesVariable(shape=[conv1_kernels_num], name_str='biases')
             conv_out = Conv2d(X_image, weights, biases, stride=1, padding='VALID')
@@ -101,11 +105,25 @@ with tf.Graph().as_default():
         with tf.name_scope('FeatsReshape'):
             features = tf.reshape(pool_out, [-1, 12 * 12 * conv1_kernels_num])
         # 第一个全连接层(fully connected layer)
+        with tf.name_scope('FC_Relu'):
+            fcl_units_num = 100
+            weights = WeightsVariable(shape=[12 * 12 * conv1_kernels_num, fcl_units_num], name_str='weights')
+            biases = BiasesVariable(shape=[fcl_units_num], name_str='biases')
+            fcl_out = FullyConnected(features, weights, biases,
+                                          activate=tf.nn.relu, act_name='relu')
+
+        #dropout层
+        with tf.name_scope('DropOut'):
+            keep_prob = tf.placeholder(tf.float32)
+            fc_dropout = tf.nn.dropout(fcl_out,keep_prob)
+
+        # 第二个全连接层(fully connected layer)
         with tf.name_scope('FC_Linear'):
-            weights = WeightsVariable(shape=[12 * 12 * conv1_kernels_num, n_classes], name_str='weights')
+            weights = WeightsVariable(shape=[fcl_units_num, n_classes], name_str='weights')
             biases = BiasesVariable(shape=[n_classes], name_str='biases')
-            Ypred_logits = FullyConnected(features, weights, biases,
+            Ypred_logits = FullyConnected(fc_dropout, weights, biases,
                                           activate=tf.identity, act_name='identity')
+
     # 定义损失层(loss layer)
     with tf.name_scope('Loss'):
         cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
@@ -125,7 +143,7 @@ with tf.Graph().as_default():
     summary_writer = tf.summary.FileWriter(logdir='../logs', graph=tf.get_default_graph())
     summary_writer.close()
     # 导入 MNIST data
-    mnist = input_data.read_data_sets("../mnist_data/", one_hot=True)
+    mnist = input_data.read_data_sets("../../mnist_data/", one_hot=True)
     #将评估结果保存到文件
     results_list = list()
     # 写入参数配置
@@ -153,7 +171,8 @@ with tf.Graph().as_default():
                 # 运行优化器训练节点 (backprop)
                 sess.run(trainer, feed_dict={X_origin: batch_x,
                                              Y_true: batch_y,
-                                             learning_rate: learning_rate_init})
+                                             learning_rate: learning_rate_init,
+                                             keep_prob:keep_prob_init})
                 # 每调用一次训练节点，training_step就加1，最终==training_epochs*total_batch
                 training_step += 1
                 #每训练display_step次，计算当前模型的损失和分类准确率(studyai.com)
@@ -186,7 +205,7 @@ with tf.Graph().as_default():
         print("Testing Accuracy:", test_accuracy)
         results_list.append(['test step', 'loss', test_loss, 'accuracy', test_accuracy])
         # 将评估结果保存到文件(studyai.com)
-        results_file = open('evaluate_results/evaluate_results.csv', 'w', newline='')
+        results_file = open('evaluate_results.csv', 'w', newline='')
         csv_writer = csv.writer(results_file, dialect='excel')
         for row in results_list:
             csv_writer.writerow(row)

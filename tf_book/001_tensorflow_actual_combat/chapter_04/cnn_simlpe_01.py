@@ -136,7 +136,7 @@ with tf.Graph().as_default():
     init = tf.global_variables_initializer()
 
     print('把计算图写入事件文件，在TensorBoard里面查看')
-    summary_writer = tf.summary.FileWriter(logdir='logs',graph=tf.get_default_graph())
+    summary_writer = tf.summary.FileWriter(logdir='../logs',graph=tf.get_default_graph())
     summary_writer.close()
 
     # 读取数据集

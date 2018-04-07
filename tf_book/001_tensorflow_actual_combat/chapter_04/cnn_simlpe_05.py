@@ -1,7 +1,8 @@
 #coding=utf-8
 
-## version1.2
-## 卷积滤波器核的数量与网络性能之间的关系
+## version1.5
+## 增加L2正则化
+
 ## 实现简单卷积神经网络对MNIST数据集进行分类
 ## conv2d + activation + pool + fc
 import csv
@@ -87,7 +88,7 @@ with tf.Graph().as_default():
     with tf.name_scope('Inference'):
         # 第一个卷积层(conv2d + biase)(studyai.com)
         with tf.name_scope('Conv2d'):
-            conv1_kernels_num = 5 # 将kernel抽取出作参数，便于观测不同kernel与准确率之间的关系
+            conv1_kernels_num = 1
             weights = WeightsVariable(shape=[5, 5, 1, conv1_kernels_num], name_str='weights')
             biases = BiasesVariable(shape=[conv1_kernels_num], name_str='biases')
             conv_out = Conv2d(X_image, weights, biases, stride=1, padding='VALID')
@@ -101,20 +102,41 @@ with tf.Graph().as_default():
         with tf.name_scope('FeatsReshape'):
             features = tf.reshape(pool_out, [-1, 12 * 12 * conv1_kernels_num])
         # 第一个全连接层(fully connected layer)
+        with tf.name_scope('FC_Relu'):
+            fcl_units_num = 100
+            weights = WeightsVariable(shape=[12 * 12 * conv1_kernels_num, fcl_units_num], name_str='weights')
+            biases = BiasesVariable(shape=[fcl_units_num], name_str='biases')
+            fc_out = FullyConnected(features, weights, biases,
+                                          activate=tf.nn.relu, act_name='relu')
+
+        #为非线性全连接层添加L2正则化损失
+        with tf.name_scope('L2_Loss'):
+            weights_loss = tf.nn.l2_loss(weights)
+
+        # 第二个全连接层(fully connected layer)
         with tf.name_scope('FC_Linear'):
-            weights = WeightsVariable(shape=[12 * 12 * conv1_kernels_num, n_classes], name_str='weights')
+            weights = WeightsVariable(shape=[fcl_units_num, n_classes], name_str='weights')
             biases = BiasesVariable(shape=[n_classes], name_str='biases')
-            Ypred_logits = FullyConnected(features, weights, biases,
+            Ypred_logits = FullyConnected(fc_out, weights, biases,
                                           activate=tf.identity, act_name='identity')
+
     # 定义损失层(loss layer)
     with tf.name_scope('Loss'):
-        cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-            labels=Y_true, logits=Ypred_logits))
+        wd = 0.001
+        with tf.name_scope('XEntropyLoss'):
+            cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
+                labels=Y_true, logits=Ypred_logits))
+
+        with tf.name_scope('TotalLoss'):
+            weights_loss = wd * weights_loss
+            total_loss = cross_entropy_loss + weights_loss
+
     # 定义优化训练层(train layer)(studyai.com)
     with tf.name_scope('Train'):
         learning_rate = tf.placeholder(tf.float32)
         optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
-        trainer = optimizer.minimize(cross_entropy_loss)
+        trainer = optimizer.minimize(total_loss)
+
     # 定义模型评估层(evaluate layer)
     with tf.name_scope('Evaluate'):
         correct_pred = tf.equal(tf.argmax(Ypred_logits, 1), tf.argmax(Y_true, 1))
@@ -125,7 +147,7 @@ with tf.Graph().as_default():
     summary_writer = tf.summary.FileWriter(logdir='../logs', graph=tf.get_default_graph())
     summary_writer.close()
     # 导入 MNIST data
-    mnist = input_data.read_data_sets("../mnist_data/", one_hot=True)
+    mnist = input_data.read_data_sets("../../mnist_data/", one_hot=True)
     #将评估结果保存到文件
     results_list = list()
     # 写入参数配置
@@ -174,8 +196,12 @@ with tf.Graph().as_default():
                     print("Training Step: " + str(training_step) +
                           ", Validation Loss= " + "{:.6f}".format(validation_loss) +
                           ", Validation Accuracy= " + "{:.5f}".format(validation_acc))
+
+                    #计算当前模型正则化损失
+                    l2loss = sess.run(weights_loss)
+
                     # 将评估结果保存到文件
-                    results_list.append([training_step, train_loss, validation_loss,
+                    results_list.append([training_step, train_loss, validation_loss,l2loss,
                                          training_step, train_acc, validation_acc])
         print("训练完毕!")
         #计算指定数量的测试集上的准确率(studyai.com)
@@ -186,7 +212,7 @@ with tf.Graph().as_default():
         print("Testing Accuracy:", test_accuracy)
         results_list.append(['test step', 'loss', test_loss, 'accuracy', test_accuracy])
         # 将评估结果保存到文件(studyai.com)
-        results_file = open('evaluate_results/evaluate_results.csv', 'w', newline='')
+        results_file = open('evaluate_results.csv', 'w', newline='')
         csv_writer = csv.writer(results_file, dialect='excel')
         for row in results_list:
             csv_writer.writerow(row)
