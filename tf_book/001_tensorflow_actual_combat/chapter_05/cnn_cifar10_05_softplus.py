@@ -1,8 +1,7 @@
 #coding=utf-8
 ## 实现简单卷积神经网络对MNIST数据集进行分类
 ## conv2d + activation + pool + fc
-## 不同优化器
-
+## softplus
 
 import csv
 import tensorflow as tf
@@ -14,9 +13,9 @@ import cifar10_input
 import numpy as np
 
 # 设置算法超参数
-# learning_rate_init = 0.001
+learning_rate_init = 0.001
 # learning_rate_init = 0.01
-learning_rate_init = 0.1
+# learning_rate_init = 0.1
 
 training_epochs = 6
 batch_size = 100
@@ -124,12 +123,12 @@ def Pool2d(x, pool= tf.nn.max_pool, k=2, stride=2,padding='SAME'):
     return pool(x, ksize=[1, k, k, 1], strides=[1, stride, stride, 1], padding=padding)
 
 # 全连接层activate(wx+b)的封装
-def FullyConnected(x, W, b, activate=tf.nn.relu, act_name='relu'):
+def FullyConnected(x, W, b, activation=tf.nn.relu, act_name='relu'):
     with tf.name_scope('Wx_b'):
         y = tf.matmul(x, W)
         y = tf.add(y, b)
     with tf.name_scope(act_name):
-        y = activate(y)
+        y = activation(y)
     return y
 
 #为每一层的激活输出添加汇总节点
@@ -151,15 +150,19 @@ def AddLossesSummary(losses):
         tf.summary.scalar(loss.op.name + '(avg)',loss_averages.average(loss))
     return loss_averages_op
 
+#修改了4处激活函数：Conv2d_1、Conv2d_2、FC1_nonlinear、FC2_nonlinear
 def Inference(image_holder):
+    activation_func = tf.nn.softplus
+    activation_name = 'softplus'
     # 第一个卷积层activate(conv2d + biase)
     with tf.name_scope('Conv2d_1'):
         # conv1_kernel_num = 64
         weights = WeightsVariable(shape=[5, 5, image_channel, conv1_kernel_num],
                                   name_str='weights',stddev=5e-2)
         biases = BiasesVariable(shape=[conv1_kernel_num], name_str='biases',init_value=0.0)
-        conv1_out = Conv2d(image_holder, weights, biases, stride=1, padding='SAME')
+        conv1_out = Conv2d(image_holder, weights, biases, stride=1, padding='SAME',activation=activation_func,act_name=activation_name)
         AddActivationSummary(conv1_out)
+
     # 第一个池化层(pool 2d)
     with tf.name_scope('Pool2d_1'):
         pool1_out = Pool2d(conv1_out, pool=tf.nn.max_pool, k=3, stride=2,padding='SAME')
@@ -170,7 +173,7 @@ def Inference(image_holder):
         weights = WeightsVariable(shape=[5, 5, conv1_kernel_num, conv2_kernel_num],
                                   name_str='weights', stddev=5e-2)
         biases = BiasesVariable(shape=[conv2_kernel_num], name_str='biases', init_value=0.0)
-        conv2_out = Conv2d(pool1_out, weights, biases, stride=1, padding='SAME')
+        conv2_out = Conv2d(pool1_out, weights, biases, stride=1, padding='SAME',activation=activation_func,act_name=activation_name)
         AddActivationSummary(conv2_out)
 
     # 第二个池化层(pool 2d)
@@ -188,7 +191,7 @@ def Inference(image_holder):
         weights = WeightsVariable(shape=[feats_dim, fc1_units_num],
                                   name_str='weights',stddev=4e-2)
         biases = BiasesVariable(shape=[fc1_units_num], name_str='biases',init_value=0.1)
-        fc1_out = FullyConnected(features, weights, biases, activate=tf.nn.relu, act_name='relu')
+        fc1_out = FullyConnected(features, weights, biases, activation=activation_func,act_name=activation_name)
         AddActivationSummary(fc1_out)
 
     # 第二个全连接层(fully connected layer)
@@ -197,7 +200,7 @@ def Inference(image_holder):
         weights = WeightsVariable(shape=[fc1_units_num, fc2_units_num],
                                   name_str='weights',stddev=4e-2)
         biases = BiasesVariable(shape=[fc2_units_num], name_str='biases',init_value=0.1)
-        fc2_out = FullyConnected(fc1_out, weights, biases,activate=tf.nn.relu, act_name='relu')
+        fc2_out = FullyConnected(fc1_out, weights, biases, activation=activation_func,act_name=activation_name)
         AddActivationSummary(fc2_out)
 
     # 第三个全连接层(fully connected layer)
@@ -206,7 +209,7 @@ def Inference(image_holder):
         weights = WeightsVariable(shape=[fc2_units_num, fc3_units_num],
                                   name_str='weights',stddev=1.0/fc2_units_num)
         biases = BiasesVariable(shape=[fc3_units_num], name_str='biases',init_value=0.0)
-        logits = FullyConnected(fc2_out, weights, biases,activate=tf.identity, act_name='linear')
+        logits = FullyConnected(fc2_out, weights, biases,activation=tf.identity, act_name='linear')
         AddActivationSummary(logits)
     return logits
 
@@ -234,12 +237,12 @@ def TrainModel():
         with tf.name_scope('Train'):
             learning_rate = tf.placeholder(tf.float32)
             global_step = tf.Variable(0, name='global_step', trainable=False, dtype=tf.int64)
-            # optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
+            optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
             # optimizer = tf.train.MomentumOptimizer(learning_rate=learning_rate,momentum=0.9)
             # optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
             # optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
             # optimizer = tf.train.AdagradOptimizer(learning_rate=learning_rate)
-            optimizer = tf.train.FtrlOptimizer(learning_rate=learning_rate)
+            # optimizer = tf.train.FtrlOptimizer(learning_rate=learning_rate)
 
             train_op = optimizer.minimize(total_loss,global_step=global_step)
 
@@ -261,7 +264,7 @@ def TrainModel():
         init_op = tf.global_variables_initializer()
 
         print('把计算图写入事件文件，在TensorBoard里面查看')
-        summary_writer = tf.summary.FileWriter(logdir='evaluate_results/Optimizers/FtrlOptimizer/lr=0.1')
+        summary_writer = tf.summary.FileWriter(logdir='evaluate_results/activations/elu')
         summary_writer.add_graph(graph=tf.get_default_graph())
         summary_writer.flush()
 
@@ -346,14 +349,14 @@ def TrainModel():
             print('---------->Accuracy on Test Examples:',accuracy_score)
             results_list.append(['Accuracy on Test Examples:',accuracy_score])
             # 将评估结果保存到文件
-            results_file = open('evaluate_results/Optimizers/FtrlOptimizer/lr=0.1/evaluate_results(Ftrl,lr=0.1).csv', 'w', newline='')
+            results_file = open('evaluate_results/activations/elu/evaluate_results.csv', 'w', newline='')
             csv_writer = csv.writer(results_file, dialect='excel')
             for row in results_list:
                 csv_writer.writerow(row)
 
 def main(argv=None):
     maybe_download_and_extract(data_dir=dataset_dir)
-    train_dir='../logs'
+    train_dir='..//logs'
     if tf.gfile.Exists(train_dir):
         tf.gfile.DeleteRecursively(train_dir)
     tf.gfile.MakeDirs(train_dir)
