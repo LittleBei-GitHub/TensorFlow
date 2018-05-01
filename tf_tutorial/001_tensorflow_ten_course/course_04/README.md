@@ -1,0 +1,25 @@
+# 基础知识点
+  * 代价函数
+    * 均方误差
+    * 交叉损失(sigmoid)
+    * 交叉损失(softmax)
+  * 拟合
+    * 欠拟合
+    * 过拟合
+      1. 增加数据集
+      2. 正则化
+      3. dropout(训练的使用，测试时不需要使用)
+  * 权重初始化
+    * 初始化W
+    * 初始化b
+  * 优化器
+    * GradientDescentOptimizer
+    * AdadeltaOptimizer
+    * AdagradOptimizer
+    * AdagradDAOptimizer
+    * MomentumOptimizer
+    * AdamOptimizer
+    * FtrlOptimizer
+    * ProximalGradientDescentOptimizer
+    * ProximalAdagradOptimizer
+    * RMSPropOptimizer
