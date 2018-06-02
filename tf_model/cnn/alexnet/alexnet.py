@@ -131,7 +131,7 @@ def inference(images):
 
     # 8th Layer: FC and return unscaled activations
     with tf.name_scope('layer8'):
-        fc8 = fc(dropout7, 4096, NUM_CLASSES, name='fc8', relu=False)
+        fc8 = fc(dropout7, 4096, NUM_CLASSES, name='fc8', active=False)
     return fc8
 
 if __name__=='__main__':
