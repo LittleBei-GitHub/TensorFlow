@@ -29,6 +29,18 @@ def get_eval_data(data_dir, batch_size):
     images = tf.image.resize_images(images=images, size=[image_size, image_size])
     return images, labels
 
+
+def variable_summary(value):
+    with tf.name_scope(name='summaries'):
+        mean=tf.reduce_mean(value)
+        stddev=tf.sqrt(tf.reduce_mean(tf.square(value-mean)))
+        tf.summary.scalar(name='mean', tensor=mean)
+        tf.summary.scalar(name='stddev', tensor=stddev)
+        tf.summary.scalar(name='max', tensor=tf.reduce_max(value))
+        tf.summary.scalar(name='min', tensor=tf.reduce_min(value))
+        tf.summary.histogram(name='histogram', values=value)
+
+
 def weights_variable(shape, stddev=0.1, name='weights'):
     initial = tf.truncated_normal(shape=shape, stddev=stddev, dtype=tf.float32)
     return tf.Variable(initial_value=initial, name=name)
