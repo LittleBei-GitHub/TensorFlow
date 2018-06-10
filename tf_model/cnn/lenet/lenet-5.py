@@ -210,4 +210,4 @@ if __name__ == '__main__':
                     # 在验证数据集上的正确率信息会有一个单独的程序来生成。
                     # print("After %d training step(s), loss on training batch is %f." % (step, loss_value))
                     # 保存当前的模型。注意这里隔出了global_step参数，这样可以让每个被保存模型的文件名末尾加上训练的轮数，比如“model.ckpt-1000”表示训练1000轮后得到的模型
-                    saver.save(sess, os.path.join(MODEL_SAVE_PATH, MODEL_NAME), global_step=global_step)
+                    saver.save(sess, os.path.join(MODEL_SAVE_PATH, MODEL_NAME), global_step=step)
