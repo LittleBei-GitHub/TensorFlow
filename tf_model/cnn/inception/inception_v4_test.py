@@ -180,6 +180,7 @@ class InceptionTest(tf.test.TestCase):
         height, width = 350, 400
         num_classes = 1000
         with self.test_session() as sess:
+            # 使用placeholder的方式赋值
             inputs = tf.placeholder(tf.float32, (batch_size, None, None, 3))
             logits, end_points = inception.inception_v4(
                 inputs, num_classes, create_aux_logits=False)
