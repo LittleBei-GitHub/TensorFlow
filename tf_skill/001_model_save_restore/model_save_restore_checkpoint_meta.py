@@ -6,7 +6,7 @@ import os
 
 DATA_NUM = 50
 EPOCH = 5000
-MODEL_SAVE_PATH = './model/model_checkpoint/'
+MODEL_SAVE_PATH = './model/model_checkpoint_meta/'
 MODEL_NAME = 'model.ckpt'
 
 
@@ -76,21 +76,18 @@ def save_model():
             if i % 100 == 0:
                 print('loss:' + str(train_loss))
                 # 每循环100次保存一次模型
-                # 不保存元数据
-                saver.save(sess, os.path.join(MODEL_SAVE_PATH, MODEL_NAME), global_step=i, write_meta_graph=False)
+                # 保存元数据，默认保存模型元数据
+                saver.save(sess, os.path.join(MODEL_SAVE_PATH, MODEL_NAME), global_step=i)
 
 
 def restore_model():
     """
         恢复模型
     """
-    # 占位符
-    input = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='x')
-    # 预测数据
-    y_hat = inference(input)
-
-    saver = tf.train.Saver()
-
+    # 创建模型加载器
+    # 加载元数据（图结构）
+    saver = tf.train.import_meta_graph(os.path.join(MODEL_SAVE_PATH, MODEL_NAME+'-5000.meta'))
+    # 创建session会话
     with tf.Session() as sess:
         # 注意：如果在保存模型阶段使用了global_step属性，则在模型保存的结果中会默认出现5个.index和.data-00000-of-00001文件
         # 并且在你的模型名与.index之间会出现'-数字'的形式（.data-00000-of-00001也一样），
@@ -100,7 +97,13 @@ def restore_model():
 
         # 加载模型
         saver.restore(sess, os.path.join(MODEL_SAVE_PATH, MODEL_NAME+'-5000'))
-        y = sess.run(y_hat, feed_dict={input: [[3]]})
+
+        # 通过变量的name属性名字来获取变量
+        x = sess.graph.get_tensor_by_name('x:0')
+        y_hat = sess.graph.get_tensor_by_name('y_hat:0')
+
+        # 运行操作结果获取结果
+        y = sess.run(y_hat, feed_dict={x: [[3]]})
         print(y)
 
 
