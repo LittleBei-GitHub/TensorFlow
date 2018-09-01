@@ -154,7 +154,7 @@ if __name__ == '__main__':
     count = 0
     for f in features:
         for i in svms:
-	        pred = i.predict(f)
+            pred = i.predict(f)
             print(pred)
             if pred[0] != 0:
                 results.append(verts[count])
