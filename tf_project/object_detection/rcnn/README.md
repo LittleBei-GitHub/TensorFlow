@@ -1,5 +1,7 @@
-# TensorFlow版的R-CNN
-  * 资源链接
-    * https://www.cnblogs.com/edwardbi/p/5647522.html
-    * https://blog.csdn.net/MyJournal/article/details/77841348
-    * https://github.com/edwardbi/DeepLearningModels/tree/master/RCNN
+# TensorFlow版的R-CNN源码解读
+  * 预训练Alexnet模型
+  * 生成用于finetuning的数据集
+  * 模型finetuning
+  * 生成用于训练svm的数据集
+  * 训练svm分类器
+  * 训练bounding boxes（该模型中未给出，包括非极大值抑制）
