@@ -20,13 +20,18 @@ from tensorflow.python.client import timeline
 import time
 
 class SolverWrapper(object):
-    """A simple wrapper around Caffe's solver.
-    This wrapper gives us control over he snapshotting process, which we
-    use to unnormalize the learned bounding-box regression weights.
+    """
+        A simple wrapper around Caffe's solver.
+        This wrapper gives us control over he snapshotting process, which we
+        use to unnormalize the learned bounding-box regression weights.
+        对caffe解决方案一个简单的封装
     """
 
     def __init__(self, sess, saver, network, imdb, roidb, output_dir, pretrained_model=None):
-        """Initialize the SolverWrapper."""
+        """
+            Initialize the SolverWrapper.
+            初始化
+        """
         self.net = network
         self.imdb = imdb
         self.roidb = roidb
@@ -42,8 +47,10 @@ class SolverWrapper(object):
         self.saver = saver
 
     def snapshot(self, sess, iter):
-        """Take a snapshot of the network after unnormalizing the learned
-        bounding-box regression weights. This enables easy use at test-time.
+        """
+            Take a snapshot of the network after unnormalizing the learned
+            bounding-box regression weights.
+            This enables easy use at test-time.
         """
         net = self.net
 
@@ -99,25 +106,26 @@ class SolverWrapper(object):
 
         return outside_mul
 
-
     def train_model(self, sess, max_iters):
-        """Network training loop."""
-
+        """
+            Network training loop.
+        """
+        # 获取一个批次的训练数据
         data_layer = get_data_layer(self.roidb, self.imdb.num_classes)
 
         # RPN
         # classification loss
-        rpn_cls_score = tf.reshape(self.net.get_output('rpn_cls_score_reshape'),[-1,2])
-        rpn_label = tf.reshape(self.net.get_output('rpn-data')[0],[-1])
-        rpn_cls_score = tf.reshape(tf.gather(rpn_cls_score,tf.where(tf.not_equal(rpn_label,-1))),[-1,2])
-        rpn_label = tf.reshape(tf.gather(rpn_label,tf.where(tf.not_equal(rpn_label,-1))),[-1])
+        rpn_cls_score = tf.reshape(self.net.get_output('rpn_cls_score_reshape'), [-1, 2])
+        rpn_label = tf.reshape(self.net.get_output('rpn-data')[0], [-1])
+        rpn_cls_score = tf.reshape(tf.gather(rpn_cls_score, tf.where(tf.not_equal(rpn_label, -1))), [-1, 2])
+        rpn_label = tf.reshape(tf.gather(rpn_label, tf.where(tf.not_equal(rpn_label, -1))), [-1])
         rpn_cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=rpn_cls_score, labels=rpn_label))
 
         # bounding box regression L1 loss
         rpn_bbox_pred = self.net.get_output('rpn_bbox_pred')
-        rpn_bbox_targets = tf.transpose(self.net.get_output('rpn-data')[1],[0,2,3,1])
-        rpn_bbox_inside_weights = tf.transpose(self.net.get_output('rpn-data')[2],[0,2,3,1])
-        rpn_bbox_outside_weights = tf.transpose(self.net.get_output('rpn-data')[3],[0,2,3,1])
+        rpn_bbox_targets = tf.transpose(self.net.get_output('rpn-data')[1], [0, 2, 3, 1])
+        rpn_bbox_inside_weights = tf.transpose(self.net.get_output('rpn-data')[2], [0, 2, 3, 1])
+        rpn_bbox_outside_weights = tf.transpose(self.net.get_output('rpn-data')[3], [0, 2, 3, 1])
 
         rpn_smooth_l1 = self._modified_smooth_l1(3.0, rpn_bbox_pred, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights)
         rpn_loss_box = tf.reduce_mean(tf.reduce_sum(rpn_smooth_l1, reduction_indices=[1, 2, 3]))
@@ -125,7 +133,7 @@ class SolverWrapper(object):
         # R-CNN
         # classification loss
         cls_score = self.net.get_output('cls_score')
-        label = tf.reshape(self.net.get_output('roi-data')[1],[-1])
+        label = tf.reshape(self.net.get_output('roi-data')[1], [-1])
         cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=cls_score, labels=label))
 
         # bounding box regression L1 loss
@@ -147,7 +155,7 @@ class SolverWrapper(object):
         momentum = cfg.TRAIN.MOMENTUM
         train_op = tf.train.MomentumOptimizer(lr, momentum).minimize(loss, global_step=global_step)
 
-        # iintialize variables
+        # initialize variables
         sess.run(tf.global_variables_initializer())
         if self.pretrained_model is not None:
             print ('Loading pretrained model '
@@ -197,8 +205,14 @@ class SolverWrapper(object):
         if last_snapshot_iter != iter:
             self.snapshot(sess, iter)
 
+
 def get_training_roidb(imdb):
-    """Returns a roidb (Region of Interest database) for use in training."""
+    """
+        Returns a roidb (Region of Interest database) for use in training.
+        返回用于训练的roi数据集
+        imdb: 对象
+    """
+    # 是否使用水平翻转图像
     if cfg.TRAIN.USE_FLIPPED:
         print 'Appending horizontally-flipped training examples...'
         imdb.append_flipped_images()
@@ -218,7 +232,10 @@ def get_training_roidb(imdb):
 
 
 def get_data_layer(roidb, num_classes):
-    """return a data layer."""
+    """
+        return a data layer.
+        获取数据层
+    """
     if cfg.TRAIN.HAS_RPN:
         if cfg.IS_MULTISCALE:
             layer = GtDataLayer(roidb)
@@ -229,10 +246,17 @@ def get_data_layer(roidb, num_classes):
 
     return layer
 
+
 def filter_roidb(roidb):
-    """Remove roidb entries that have no usable RoIs."""
+    """
+        Remove roidb entries that have no usable RoIs.
+        移除无效的roi
+    """
 
     def is_valid(entry):
+        """
+            判断roi是否有效
+        """
         # Valid images have:
         #   (1) At least one foreground RoI OR
         #   (2) At least one background RoI
@@ -249,13 +273,15 @@ def filter_roidb(roidb):
     num = len(roidb)
     filtered_roidb = [entry for entry in roidb if is_valid(entry)]
     num_after = len(filtered_roidb)
-    print 'Filtered {} roidb entries: {} -> {}'.format(num - num_after,
-                                                       num, num_after)
+    print 'Filtered {} roidb entries: {} -> {}'.format(num - num_after, num, num_after)
     return filtered_roidb
 
 
 def train_net(network, imdb, roidb, output_dir, pretrained_model=None, max_iters=40000):
-    """Train a Fast R-CNN network."""
+    """
+        Train a Fast R-CNN network.
+        训练Fast R-CNN网络
+    """
     roidb = filter_roidb(roidb)
     saver = tf.train.Saver(max_to_keep=100)
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:

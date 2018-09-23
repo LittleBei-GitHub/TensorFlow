@@ -21,12 +21,11 @@ def cpu_nms(np.ndarray[np.float32_t, ndim=2] dets, np.float thresh):
     cdef np.ndarray[np.float32_t, ndim=1] y2 = dets[:, 3]
     cdef np.ndarray[np.float32_t, ndim=1] scores = dets[:, 4]
 
-    cdef np.ndarray[np.float32_t, ndim=1] areas = (x2 - x1 + 1) * (y2 - y1 + 1)
-    cdef np.ndarray[np.int_t, ndim=1] order = scores.argsort()[::-1]
+    cdef np.ndarray[np.float32_t, ndim=1] areas = (x2 - x1 + 1) * (y2 - y1 + 1)  # 计算面积
+    cdef np.ndarray[np.int_t, ndim=1] order = scores.argsort()[::-1]  # 索引排序，从大到小，返回排序后的索引
 
-    cdef int ndets = dets.shape[0]
-    cdef np.ndarray[np.int_t, ndim=1] suppressed = \
-            np.zeros((ndets), dtype=np.int)
+    cdef int ndets = dets.shape[0] # 标记为1的个数
+    cdef np.ndarray[np.int_t, ndim=1] suppressed = np.zeros((ndets), dtype=np.int)  # 存放已经处理过的
 
     # nominal indices
     cdef int _i, _j
@@ -42,7 +41,7 @@ def cpu_nms(np.ndarray[np.float32_t, ndim=2] dets, np.float thresh):
     keep = []
     for _i in range(ndets):
         i = order[_i]
-        if suppressed[i] == 1:
+        if suppressed[i] == 1: # 等于表示处理过的
             continue
         keep.append(i)
         ix1 = x1[i]
@@ -64,5 +63,4 @@ def cpu_nms(np.ndarray[np.float32_t, ndim=2] dets, np.float thresh):
             ovr = inter / (iarea + areas[j] - inter)
             if ovr >= thresh:
                 suppressed[j] = 1
-
-    return keep
+    return keep  # 返回被保留的索引

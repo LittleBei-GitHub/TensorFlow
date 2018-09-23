@@ -16,21 +16,23 @@ def bbox_overlaps(
         np.ndarray[DTYPE_t, ndim=2] boxes,
         np.ndarray[DTYPE_t, ndim=2] query_boxes):
     """
+    计算iou
     Parameters
     ----------
     boxes: (N, 4) ndarray of float
     query_boxes: (K, 4) ndarray of float
     Returns
     -------
-    overlaps: (N, K) ndarray of overlap between boxes and query_boxes
+    overlaps(交叠): (N, K) ndarray of overlap between boxes and query_boxes
     """
     cdef unsigned int N = boxes.shape[0]
     cdef unsigned int K = query_boxes.shape[0]
-    cdef np.ndarray[DTYPE_t, ndim=2] overlaps = np.zeros((N, K), dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=2] overlaps = np.zeros((N, K), dtype=DTYPE) # 创建一个N*K的叠交矩阵
     cdef DTYPE_t iw, ih, box_area
     cdef DTYPE_t ua
     cdef unsigned int k, n
     for k in range(K):
+        # 目标区域面积
         box_area = (
             (query_boxes[k, 2] - query_boxes[k, 0] + 1) *
             (query_boxes[k, 3] - query_boxes[k, 1] + 1)
@@ -46,10 +48,12 @@ def bbox_overlaps(
                     max(boxes[n, 1], query_boxes[k, 1]) + 1
                 )
                 if ih > 0:
+                    # 两个区域并集的面积
                     ua = float(
                         (boxes[n, 2] - boxes[n, 0] + 1) *
                         (boxes[n, 3] - boxes[n, 1] + 1) +
                         box_area - iw * ih
                     )
+                    # 计算iou(交集/并集)
                     overlaps[n, k] = iw * ih / ua
     return overlaps

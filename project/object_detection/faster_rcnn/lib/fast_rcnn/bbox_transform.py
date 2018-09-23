@@ -7,7 +7,11 @@
 
 import numpy as np
 
+
 def bbox_transform(ex_rois, gt_rois):
+    """
+        将bounding box转成回归目标形式
+    """
     ex_widths = ex_rois[:, 2] - ex_rois[:, 0] + 1.0
     ex_heights = ex_rois[:, 3] - ex_rois[:, 1] + 1.0
     ex_ctr_x = ex_rois[:, 0] + 0.5 * ex_widths
@@ -27,7 +31,11 @@ def bbox_transform(ex_rois, gt_rois):
         (targets_dx, targets_dy, targets_dw, targets_dh)).transpose()
     return targets
 
+
 def bbox_transform_inv(boxes, deltas):
+    """
+        使用预测的回归的偏移量去调整锚框
+    """
     if boxes.shape[0] == 0:
         return np.zeros((0, deltas.shape[1]), dtype=deltas.dtype)
 
@@ -60,9 +68,11 @@ def bbox_transform_inv(boxes, deltas):
 
     return pred_boxes
 
+
 def clip_boxes(boxes, im_shape):
     """
-    Clip boxes to image boundaries.
+        Clip boxes to image boundaries.
+        裁剪anchors box边框
     """
 
     # x1 >= 0

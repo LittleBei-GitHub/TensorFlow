@@ -20,7 +20,10 @@ import tensorflow as tf
 
 
 def get_network(name):
-    """Get a network by name."""
+    """
+        Get a network by name.
+        通过网络的名字来获取网络的结构
+    """
     #if not __sets.has_key(name):
     #    raise KeyError('Unknown dataset: {}'.format(name))
     #return __sets[name]
@@ -33,5 +36,7 @@ def get_network(name):
     
 
 def list_networks():
-    """List all registered imdbs."""
+    """
+        List all registered imdbs.
+    """
     return __sets.keys()

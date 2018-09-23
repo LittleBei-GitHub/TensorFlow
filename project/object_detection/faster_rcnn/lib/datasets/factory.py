@@ -15,6 +15,7 @@ import datasets.kitti
 import datasets.kitti_tracking
 import numpy as np
 
+
 def _selective_search_IJCV_top_k(split, year, top_k):
     """Return an imdb that uses the top k proposals from the selective search
     IJCV code.
@@ -24,12 +25,13 @@ def _selective_search_IJCV_top_k(split, year, top_k):
     imdb.config['top_k'] = top_k
     return imdb
 
+
 # Set up voc_<year>_<split> using selective search "fast" mode
 for year in ['2007', '2012']:
     for split in ['train', 'val', 'trainval', 'test']:
         name = 'voc_{}_{}'.format(year, split)
-        __sets[name] = (lambda split=split, year=year:
-                datasets.pascal_voc(split, year))
+        __sets[name] = (lambda split=split, year=year: datasets.pascal_voc(split, year))
+
 """
 # Set up voc_<year>_<split>_top_<k> using selective search "quality" mode
 # but only returning the first k boxes
@@ -46,15 +48,13 @@ for year in ['2007']:
     for split in ['train', 'val', 'trainval', 'test']:
         name = 'voc_{}_{}'.format(year, split)
         print name
-        __sets[name] = (lambda split=split, year=year:
-                datasets.pascal_voc(split, year))
+        __sets[name] = (lambda split=split, year=year: datasets.pascal_voc(split, year))
 
 # KITTI dataset
 for split in ['train', 'val', 'trainval', 'test']:
     name = 'kitti_{}'.format(split)
     print name
-    __sets[name] = (lambda split=split:
-            datasets.kitti(split))
+    __sets[name] = (lambda split=split: datasets.kitti(split))
 
 # Set up coco_2014_<split>
 for year in ['2014']:
@@ -72,16 +72,22 @@ for year in ['2015']:
 for split in ['71', '370']:
     name = 'nthu_{}'.format(split)
     print name
-    __sets[name] = (lambda split=split:
-            datasets.nthu(split))
+    __sets[name] = (lambda split=split: datasets.nthu(split))
 
 
 def get_imdb(name):
-    """Get an imdb (image database) by name."""
+    """
+        Get an imdb (image database) by name.
+        使用数据集名称获取图像数据集
+    """
     if not __sets.has_key(name):
         raise KeyError('Unknown dataset: {}'.format(name))
-    return __sets[name]()
+    return __sets[name]()   # 返回的是对象
+
 
 def list_imdbs():
-    """List all registered imdbs."""
+    """
+        List all registered imdbs.
+        列出所有可有的图像数据集
+    """
     return __sets.keys()

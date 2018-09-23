@@ -1,3 +1,5 @@
+# coding=utf-8
+
 import numpy as np
 import tensorflow as tf
 import roi_pooling_layer.roi_pooling_op as roi_pool_op
@@ -7,14 +9,20 @@ from rpn_msr.anchor_target_layer_tf import anchor_target_layer as anchor_target_
 from rpn_msr.proposal_target_layer_tf import proposal_target_layer as proposal_target_layer_py
 
 
-
+# padding 方式
 DEFAULT_PADDING = 'SAME'
 
+
 def layer(op):
+    """
+        装饰器
+    """
+    # op 是函数名字
     def layer_decorated(self, *args, **kwargs):
         # Automatically set a name if not provided.
-        name = kwargs.setdefault('name', self.get_unique_name(op.__name__))
+        name = kwargs.setdefault('name', self.get_unique_name(op.__name__))  # op.__name__获取函数名
         # Figure out the layer inputs.
+        # 指定输入层
         if len(self.inputs)==0:
             raise RuntimeError('No input variables found for layer %s.'%name)
         elif len(self.inputs)==1:
@@ -22,14 +30,16 @@ def layer(op):
         else:
             layer_input = list(self.inputs)
         # Perform the operation and get the output.
+        # 执行op函数本体，并获取输出
         layer_output = op(self, layer_input, *args, **kwargs)
         # Add to layer LUT.
         self.layers[name] = layer_output
         # This output is now the input for the next layer.
-        self.feed(layer_output)
+        self.feed(layer_output)  # ？？？？？
         # Return self for chained calls.
         return self
     return layer_decorated
+
 
 class Network(object):
     def __init__(self, inputs, trainable=True):
@@ -60,20 +70,28 @@ class Network(object):
                                 raise
 
     def feed(self, *args):
+        """
+            收集输入层
+        """
         assert len(args)!=0
         self.inputs = []
         for layer in args:
+            # basestring是str和unicode的超类（父类），也是抽象类，因此不能被调用和实例化，
+            # 但可以被用来判断一个对象是否为str或者unicode的实例
             if isinstance(layer, basestring):
                 try:
                     layer = self.layers[layer]
                     print layer
                 except KeyError:
                     print self.layers.keys()
-                    raise KeyError('Unknown layer name fed: %s'%layer)
+                    raise KeyError('Unknown layer name feed: %s'%layer)
             self.inputs.append(layer)
         return self
 
     def get_output(self, layer):
+        """
+            获取层
+        """
         try:
             layer = self.layers[layer]
         except KeyError:
@@ -82,10 +100,16 @@ class Network(object):
         return layer
 
     def get_unique_name(self, prefix):
-        id = sum(t.startswith(prefix) for t,_ in self.layers.items())+1
+        """
+            生成唯一的名字
+        """
+        id = sum(t.startswith(prefix) for t, _ in self.layers.items())+1
         return '%s_%d'%(prefix, id)
 
     def make_var(self, name, shape, initializer=None, trainable=True):
+        """
+            生成变量
+        """
         return tf.get_variable(name, shape, initializer=initializer, trainable=trainable)
 
     def validate_padding(self, padding):
@@ -93,13 +117,15 @@ class Network(object):
 
     @layer
     def conv(self, input, k_h, k_w, c_o, s_h, s_w, name, relu=True, padding=DEFAULT_PADDING, group=1, trainable=True):
+        """
+            卷积层
+        """
         self.validate_padding(padding)
         c_i = input.get_shape()[-1]
         assert c_i%group==0
         assert c_o%group==0
         convolve = lambda i, k: tf.nn.conv2d(i, k, [1, s_h, s_w, 1], padding=padding)
         with tf.variable_scope(name) as scope:
-
             init_weights = tf.truncated_normal_initializer(0.0, stddev=0.01)
             init_biases = tf.constant_initializer(0.0)
             kernel = self.make_var('weights', [k_h, k_w, c_i/group, c_o], init_weights, trainable)
@@ -119,10 +145,16 @@ class Network(object):
 
     @layer
     def relu(self, input, name):
+        """
+            激活层
+        """
         return tf.nn.relu(input, name=name)
 
     @layer
     def max_pool(self, input, k_h, k_w, s_h, s_w, name, padding=DEFAULT_PADDING):
+        """
+            最大池化层
+        """
         self.validate_padding(padding)
         return tf.nn.max_pool(input,
                               ksize=[1, k_h, k_w, 1],
@@ -132,6 +164,9 @@ class Network(object):
 
     @layer
     def avg_pool(self, input, k_h, k_w, s_h, s_w, name, padding=DEFAULT_PADDING):
+        """
+            平均池化层
+        """
         self.validate_padding(padding)
         return tf.nn.avg_pool(input,
                               ksize=[1, k_h, k_w, 1],
@@ -141,6 +176,10 @@ class Network(object):
 
     @layer
     def roi_pool(self, input, pooled_height, pooled_width, spatial_scale, name):
+        """
+            感兴趣区域层化
+            spatial_scale: 空间缩放范围
+        """
         # only use the first input
         if isinstance(input[0], tuple):
             input[0] = input[0][0]
@@ -149,7 +188,8 @@ class Network(object):
             input[1] = input[1][0]
 
         print input
-        return roi_pool_op.roi_pool(input[0], input[1],
+        return roi_pool_op.roi_pool(input[0],
+                                    input[1],
                                     pooled_height,
                                     pooled_width,
                                     spatial_scale,
@@ -157,56 +197,111 @@ class Network(object):
 
     @layer
     def proposal_layer(self, input, _feat_stride, anchor_scales, cfg_key, name):
+        """
+            候选区域层
+        """
         if isinstance(input[0], tuple):
             input[0] = input[0][0]
-        return tf.reshape(tf.py_func(proposal_layer_py,[input[0],input[1],input[2], cfg_key, _feat_stride, anchor_scales], [tf.float32]),[-1,5],name =name)
-
+        return tf.reshape(
+            tf.py_func(
+                proposal_layer_py,
+                [input[0], input[1], input[2], cfg_key, _feat_stride, anchor_scales],
+                [tf.float32]
+            ),
+            [-1, 5],
+            name=name
+        )
 
     @layer
     def anchor_target_layer(self, input, _feat_stride, anchor_scales, name):
+        """
+            获取锚点层
+        """
         if isinstance(input[0], tuple):
             input[0] = input[0][0]
 
         with tf.variable_scope(name) as scope:
-
-            rpn_labels,rpn_bbox_targets,rpn_bbox_inside_weights,rpn_bbox_outside_weights = tf.py_func(anchor_target_layer_py,[input[0],input[1],input[2],input[3], _feat_stride, anchor_scales],[tf.float32,tf.float32,tf.float32,tf.float32])
-
-            rpn_labels = tf.convert_to_tensor(tf.cast(rpn_labels,tf.int32), name = 'rpn_labels')
-            rpn_bbox_targets = tf.convert_to_tensor(rpn_bbox_targets, name = 'rpn_bbox_targets')
-            rpn_bbox_inside_weights = tf.convert_to_tensor(rpn_bbox_inside_weights , name = 'rpn_bbox_inside_weights')
-            rpn_bbox_outside_weights = tf.convert_to_tensor(rpn_bbox_outside_weights , name = 'rpn_bbox_outside_weights')
-
+            # py_func函数可执行自定义的python函数
+            rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights = \
+                tf.py_func(
+                    anchor_target_layer_py,
+                    [input[0], input[1], input[2], input[3], _feat_stride, anchor_scales],
+                    [tf.float32, tf.float32, tf.float32, tf.float32]
+                )
+            # 转成tensorflow的张量
+            rpn_labels = tf.convert_to_tensor(tf.cast(rpn_labels, tf.int32), name='rpn_labels')
+            rpn_bbox_targets = tf.convert_to_tensor(rpn_bbox_targets, name='rpn_bbox_targets')
+            rpn_bbox_inside_weights = tf.convert_to_tensor(rpn_bbox_inside_weights, name='rpn_bbox_inside_weights')
+            rpn_bbox_outside_weights = tf.convert_to_tensor(rpn_bbox_outside_weights, name='rpn_bbox_outside_weights')
 
             return rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights
 
-
     @layer
     def proposal_target_layer(self, input, classes, name):
+        """
+            候选区域目标层
+            感兴趣区域、生成标签、bbox目标、权重
+        """
         if isinstance(input[0], tuple):
             input[0] = input[0][0]
         with tf.variable_scope(name) as scope:
+            rois, labels, bbox_targets, bbox_inside_weights, bbox_outside_weights = \
+                tf.py_func(
+                    proposal_target_layer_py,
+                    [input[0], input[1], classes],
+                    [tf.float32, tf.float32, tf.float32, tf.float32, tf.float32]
+                )
 
-            rois,labels,bbox_targets,bbox_inside_weights,bbox_outside_weights = tf.py_func(proposal_target_layer_py,[input[0],input[1],classes],[tf.float32,tf.float32,tf.float32,tf.float32,tf.float32])
+            rois = tf.reshape(rois, [-1, 5], name='rois')
+            labels = tf.convert_to_tensor(tf.cast(labels, tf.int32), name='labels')
+            bbox_targets = tf.convert_to_tensor(bbox_targets, name='bbox_targets')
+            bbox_inside_weights = tf.convert_to_tensor(bbox_inside_weights, name='bbox_inside_weights')
+            bbox_outside_weights = tf.convert_to_tensor(bbox_outside_weights, name='bbox_outside_weights')
 
-            rois = tf.reshape(rois,[-1,5] , name = 'rois') 
-            labels = tf.convert_to_tensor(tf.cast(labels,tf.int32), name = 'labels')
-            bbox_targets = tf.convert_to_tensor(bbox_targets, name = 'bbox_targets')
-            bbox_inside_weights = tf.convert_to_tensor(bbox_inside_weights, name = 'bbox_inside_weights')
-            bbox_outside_weights = tf.convert_to_tensor(bbox_outside_weights, name = 'bbox_outside_weights')
-
-           
             return rois, labels, bbox_targets, bbox_inside_weights, bbox_outside_weights
 
-
     @layer
-    def reshape_layer(self, input, d,name):
+    def reshape_layer(self, input, d, name):
+        """
+        调整张量的形状
+        """
+        # b,h,w,a*d
+        # b,h*a,w,d=2
         input_shape = tf.shape(input)
         if name == 'rpn_cls_prob_reshape':
-             return tf.transpose(tf.reshape(tf.transpose(input,[0,3,1,2]),[input_shape[0],
-                    int(d),tf.cast(tf.cast(input_shape[1],tf.float32)/tf.cast(d,tf.float32)*tf.cast(input_shape[3],tf.float32),tf.int32),input_shape[2]]),[0,2,3,1],name=name)
+             return tf.transpose(
+                 tf.reshape(
+                     tf.transpose(input, [0, 3, 1, 2]),  # b,d,h*a,w
+                     [
+                         input_shape[0],
+                         int(d),
+                         tf.cast(
+                             tf.cast(input_shape[1], tf.float32)/tf.cast(d, tf.float32)*tf.cast(input_shape[3], tf.float32),
+                             tf.int32
+                         ),
+                         input_shape[2]
+                      ]
+                 ),  # b,a*d,h,w
+                 [0, 2, 3, 1],  # b,h,w,a*d
+                 name=name
+             )
         else:
-             return tf.transpose(tf.reshape(tf.transpose(input,[0,3,1,2]),[input_shape[0],
-                    int(d),tf.cast(tf.cast(input_shape[1],tf.float32)*(tf.cast(input_shape[3],tf.float32)/tf.cast(d,tf.float32)),tf.int32),input_shape[2]]),[0,2,3,1],name=name)
+             return tf.transpose(
+                 tf.reshape(
+                     tf.transpose(input, [0, 3, 1, 2]),  # b,a*d,h,w
+                     [
+                         input_shape[0],
+                         int(d),
+                         tf.cast(
+                             tf.cast(input_shape[1], tf.float32)*(tf.cast(input_shape[3], tf.float32)/tf.cast(d, tf.float32)),
+                             tf.int32
+                         ),
+                         input_shape[2]
+                     ]
+                 ),  # b,d,h*a,w
+                 [0, 2, 3, 1],  # b,h*a,w,d
+                 name=name
+             )
 
     @layer
     def feature_extrapolating(self, input, scales_base, num_scale_base, num_per_octave, name):
@@ -231,6 +326,9 @@ class Network(object):
 
     @layer
     def fc(self, input, num_out, name, relu=True, trainable=True):
+        """
+            全连接层
+        """
         with tf.variable_scope(name) as scope:
             # only use the first input
             if isinstance(input, tuple):
@@ -241,7 +339,7 @@ class Network(object):
                 dim = 1
                 for d in input_shape[1:].as_list():
                     dim *= d
-                feed_in = tf.reshape(tf.transpose(input,[0,3,1,2]), [-1, dim])
+                feed_in = tf.reshape(tf.transpose(input, [0, 3, 1, 2]), [-1, dim])
             else:
                 feed_in, dim = (input, int(input_shape[-1]))
 
@@ -261,11 +359,28 @@ class Network(object):
 
     @layer
     def softmax(self, input, name):
-        input_shape = tf.shape(input)
+        """
+            softmax操作
+        """
+        input_shape = tf.shape(input)  # b,h*a,w,d
         if name == 'rpn_cls_prob':
-            return tf.reshape(tf.nn.softmax(tf.reshape(input,[-1,input_shape[3]])),[-1,input_shape[1],input_shape[2],input_shape[3]],name=name)
+            return tf.reshape(
+                tf.nn.softmax(
+                    tf.reshape(
+                        input,
+                        [-1, input_shape[3]]
+                    )  # b*h*a*w,d
+                ),
+                [
+                    -1,
+                    input_shape[1],
+                    input_shape[2],
+                    input_shape[3]
+                ],
+                name=name
+            )  # b,h*a,w,d
         else:
-            return tf.nn.softmax(input,name=name)
+            return tf.nn.softmax(input, name=name)
 
     @layer
     def dropout(self, input, keep_prob, name):

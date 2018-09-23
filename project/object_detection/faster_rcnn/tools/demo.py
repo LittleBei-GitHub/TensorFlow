@@ -1,4 +1,6 @@
-import _init_paths
+# coding=utf-8
+
+import _init_paths  # 导入系统路径
 import tensorflow as tf
 from fast_rcnn.config import cfg
 from fast_rcnn.test import im_detect
@@ -22,7 +24,9 @@ CLASSES = ('__background__',
 #CLASSES = ('__background__','person','bike','motorbike','car','bus')
 
 def vis_detections(im, class_name, dets,ax, thresh=0.5):
-    """Draw detected bounding boxes."""
+    """
+        Draw detected bounding boxes.
+    """
     inds = np.where(dets[:, -1] >= thresh)[0]
     if len(inds) == 0:
         return
@@ -52,7 +56,9 @@ def vis_detections(im, class_name, dets,ax, thresh=0.5):
 
 
 def demo(sess, net, image_name):
-    """Detect object classes in an image using pre-computed object proposals."""
+    """
+        Detect object classes in an image using pre-computed object proposals.
+    """
 
     # Load the demo image
     im_file = os.path.join(cfg.DATA_DIR, 'demo', image_name)
@@ -84,8 +90,12 @@ def demo(sess, net, image_name):
         dets = dets[keep, :]
         vis_detections(im, cls, dets, ax, thresh=CONF_THRESH)
 
+
 def parse_args():
-    """Parse input arguments."""
+    """
+        Parse input arguments.
+        配置gpu、cpu、使用网络类型以及对应网络模型的路径
+    """
     parser = argparse.ArgumentParser(description='Faster R-CNN demo')
     parser.add_argument('--gpu', dest='gpu_id', help='GPU device id to use [0]',
                         default=0, type=int)
@@ -96,23 +106,29 @@ def parse_args():
                         default='VGGnet_test')
     parser.add_argument('--model', dest='model', help='Model path',
                         default=' ')
-
     args = parser.parse_args()
-
     return args
+
+
 if __name__ == '__main__':
-    cfg.TEST.HAS_RPN = True  # Use RPN for proposals
+    # Use RPN for proposals
+    # 将RPN用于候选区域
+    cfg.TEST.HAS_RPN = True
 
+    # 解析参数
     args = parse_args()
-
+    # 判断模型路径是否存在
     if args.model == ' ':
         raise IOError(('Error: Model not found.\n'))
         
     # init session
+    # 初始化session
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
     # load network
+    # 加载网络
     net = get_network(args.demo_net)
     # load model
+    # 加载模型
     saver = tf.train.Saver(write_version=tf.train.SaverDef.V1)
     saver.restore(sess, args.model)
    
@@ -123,7 +139,7 @@ if __name__ == '__main__':
     # Warmup on a dummy image
     im = 128 * np.ones((300, 300, 3), dtype=np.uint8)
     for i in xrange(2):
-        _, _= im_detect(sess, net, im)
+        _, _ = im_detect(sess, net, im)
 
     im_names = ['000456.jpg', '000542.jpg', '001150.jpg',
                 '001763.jpg', '004545.jpg']
@@ -135,4 +151,3 @@ if __name__ == '__main__':
         demo(sess, net, im_name)
 
     plt.show()
-

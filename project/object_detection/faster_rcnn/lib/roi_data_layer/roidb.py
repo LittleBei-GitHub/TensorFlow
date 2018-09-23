@@ -14,16 +14,17 @@ from utils.cython_bbox import bbox_overlaps
 import PIL
 
 def prepare_roidb(imdb):
-    """Enrich the imdb's roidb by adding some derived quantities that
-    are useful for training. This function precomputes the maximum
-    overlap, taken over ground-truth boxes, between each ROI and
-    each ground-truth box. The class with maximum overlap is also
-    recorded.
+    """
+        Enrich the imdb's roidb by adding some derived quantities that are useful for training.
+        This function precomputes the maximum overlap, taken over ground-truth boxes,
+        between each ROI and each ground-truth box. The class with maximum overlap is also
+        recorded.
+        丰富图像数据集的roi数据集，通过添加一些派生的数据。
     """
     sizes = [PIL.Image.open(imdb.image_path_at(i)).size
              for i in xrange(imdb.num_images)]
     roidb = imdb.roidb
-    for i in xrange(len(imdb.image_index)):
+    for i in xrange(len(imdb.image_index)):  # 对每张图像做如下操作
         roidb[i]['image'] = imdb.image_path_at(i)
         roidb[i]['width'] = sizes[i][0]
         roidb[i]['height'] = sizes[i][1]
@@ -42,6 +43,7 @@ def prepare_roidb(imdb):
         # max overlap > 0 => class should not be zero (must be a fg class)
         nonzero_inds = np.where(max_overlaps > 0)[0]
         assert all(max_classes[nonzero_inds] != 0)
+
 
 def add_bbox_regression_targets(roidb):
     """Add information needed to train bounding-box regressors."""
@@ -105,6 +107,7 @@ def add_bbox_regression_targets(roidb):
     # These values will be needed for making predictions
     # (the predicts will need to be unnormalized and uncentered)
     return means.ravel(), stds.ravel()
+
 
 def _compute_targets(rois, overlaps, labels):
     """Compute bounding-box regression targets for an image."""

@@ -19,7 +19,12 @@ DEBUG = False
 Outputs object detection proposals by applying estimated bounding-box
 transformations to a set of regular boxes (called "anchors").
 """
-def proposal_layer(rpn_cls_prob_reshape,rpn_bbox_pred,im_info,cfg_key,_feat_stride = [16,],anchor_scales = [8, 16, 32]):
+
+
+def proposal_layer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info, cfg_key, _feat_stride = [16,], anchor_scales = [8, 16, 32]):
+    """
+        使用rpn结果获取感兴趣区域
+    """
     # Algorithm:
     #
     # for each (H, W) location i
@@ -33,18 +38,18 @@ def proposal_layer(rpn_cls_prob_reshape,rpn_bbox_pred,im_info,cfg_key,_feat_stri
     # take after_nms_topN proposals after NMS
     # return the top proposals (-> RoIs top, scores top)
     #layer_params = yaml.load(self.param_str_)
-    _anchors = generate_anchors(scales=np.array(anchor_scales))
-    _num_anchors = _anchors.shape[0]
-    rpn_cls_prob_reshape = np.transpose(rpn_cls_prob_reshape,[0,3,1,2])
-    rpn_bbox_pred = np.transpose(rpn_bbox_pred,[0,3,1,2])
-    #rpn_cls_prob_reshape = np.transpose(np.reshape(rpn_cls_prob_reshape,[1,rpn_cls_prob_reshape.shape[0],rpn_cls_prob_reshape.shape[1],rpn_cls_prob_reshape.shape[2]]),[0,3,2,1])
-    #rpn_bbox_pred = np.transpose(rpn_bbox_pred,[0,3,2,1])
+    _anchors = generate_anchors(scales=np.array(anchor_scales))  # 生成基础锚框
+    _num_anchors = _anchors.shape[0]  # 基础锚框的数量
+    rpn_cls_prob_reshape = np.transpose(rpn_cls_prob_reshape, [0, 3, 1, 2])
+    rpn_bbox_pred = np.transpose(rpn_bbox_pred, [0, 3, 1, 2])
+    # rpn_cls_prob_reshape = np.transpose(np.reshape(rpn_cls_prob_reshape,[1,rpn_cls_prob_reshape.shape[0],rpn_cls_prob_reshape.shape[1],rpn_cls_prob_reshape.shape[2]]),[0,3,2,1])
+    # rpn_bbox_pred = np.transpose(rpn_bbox_pred,[0,3,2,1])
     im_info = im_info[0]
 
     assert rpn_cls_prob_reshape.shape[0] == 1, \
         'Only single item batches are supported'
     # cfg_key = str(self.phase) # either 'TRAIN' or 'TEST'
-    #cfg_key = 'TEST'
+    # cfg_key = 'TEST'
     pre_nms_topN  = cfg[cfg_key].RPN_PRE_NMS_TOP_N
     post_nms_topN = cfg[cfg_key].RPN_POST_NMS_TOP_N
     nms_thresh    = cfg[cfg_key].RPN_NMS_THRESH
@@ -52,15 +57,16 @@ def proposal_layer(rpn_cls_prob_reshape,rpn_bbox_pred,im_info,cfg_key,_feat_stri
 
     # the first set of _num_anchors channels are bg probs
     # the second set are the fg probs, which we want
-    scores = rpn_cls_prob_reshape[:, _num_anchors:, :, :]
+    scores = rpn_cls_prob_reshape[:, _num_anchors:, :, :]  # ???
     bbox_deltas = rpn_bbox_pred
-    #im_info = bottom[2].data[0, :]
+    # im_info = bottom[2].data[0, :]
 
     if DEBUG:
         print 'im_size: ({}, {})'.format(im_info[0], im_info[1])
         print 'scale: {}'.format(im_info[2])
 
     # 1. Generate proposals from bbox deltas and shifted anchors
+    # 1. 生成候选区域
     height, width = scores.shape[-2:]
 
     if DEBUG:
@@ -105,16 +111,20 @@ def proposal_layer(rpn_cls_prob_reshape,rpn_bbox_pred,im_info,cfg_key,_feat_stri
     proposals = bbox_transform_inv(anchors, bbox_deltas)
 
     # 2. clip predicted boxes to image
+    # 2. 裁剪候选区域边框
     proposals = clip_boxes(proposals, im_info[:2])
 
     # 3. remove predicted boxes with either height or width < threshold
+    # 3. 删除height或width小于阈值的边框
     # (NOTE: convert min_size to input image scale stored in im_info[2])
     keep = _filter_boxes(proposals, min_size * im_info[2])
     proposals = proposals[keep, :]
     scores = scores[keep]
 
     # 4. sort all (proposal, score) pairs by score from highest to lowest
+    # 4. 对得分排序
     # 5. take top pre_nms_topN (e.g. 6000)
+    # 5. 取出topN
     order = scores.ravel().argsort()[::-1]
     if pre_nms_topN > 0:
         order = order[:pre_nms_topN]
@@ -122,16 +132,19 @@ def proposal_layer(rpn_cls_prob_reshape,rpn_bbox_pred,im_info,cfg_key,_feat_stri
     scores = scores[order]
 
     # 6. apply nms (e.g. threshold = 0.7)
+    # 6. 应用nms
     # 7. take after_nms_topN (e.g. 300)
+    # 7. 取nms后的topN
     # 8. return the top proposals (-> RoIs top)
+    # 8. 返回topN
     keep = nms(np.hstack((proposals, scores)), nms_thresh)
     if post_nms_topN > 0:
         keep = keep[:post_nms_topN]
     proposals = proposals[keep, :]
     scores = scores[keep]
     # Output rois blob
-    # Our RPN implementation only supports a single input image, so all
-    # batch inds are 0
+    # Our RPN implementation only supports a single input image, so all batch inds are 0
+    # batch inds 设置为0
     batch_inds = np.zeros((proposals.shape[0], 1), dtype=np.float32)
     blob = np.hstack((batch_inds, proposals.astype(np.float32, copy=False)))
     return blob

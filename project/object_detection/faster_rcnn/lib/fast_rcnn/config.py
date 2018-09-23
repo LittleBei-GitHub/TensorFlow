@@ -21,6 +21,7 @@ import os.path as osp
 import numpy as np
 from distutils import spawn
 # `pip install easydict` if you don't have it
+# easydict的作用：可以使得以属性的方式去访问字典的值
 from easydict import EasyDict as edict
 
 __C = edict()
@@ -35,7 +36,7 @@ cfg = __C
 __C.TRAIN = edict()
 #__C.NET_NAME = 'VGGnet'
 # learning rate
-__C.TRAIN.LEARNING_RATE = 0.001
+__C.TRAIN.LEARNING_RATE = 0.001  # 学习率
 __C.TRAIN.MOMENTUM = 0.9
 __C.TRAIN.GAMMA = 0.1
 __C.TRAIN.STEPSIZE = 50000
@@ -57,15 +58,19 @@ __C.IS_MULTISCALE = False
 
 # Scales to use during training (can list multiple scales)
 # Each scale is the pixel size of an image's shortest side
+# 图像的最短边
 __C.TRAIN.SCALES = (600,)
 
 # Max pixel size of the longest side of a scaled input image
+# 被规范后的图像的最长边允许的最大像素
 __C.TRAIN.MAX_SIZE = 1000
 
 # Images to use per minibatch
+# 图片批量大小
 __C.TRAIN.IMS_PER_BATCH = 2
 
 # Minibatch size (number of regions of interest [ROIs])
+# ROI的批量大小
 __C.TRAIN.BATCH_SIZE = 128
 
 # Fraction of minibatch that is labeled foreground (i.e. class > 0)
@@ -80,6 +85,7 @@ __C.TRAIN.BG_THRESH_HI = 0.5
 __C.TRAIN.BG_THRESH_LO = 0.1
 
 # Use horizontally-flipped images during training?
+# 在训练时是否使用水平翻转图像
 __C.TRAIN.USE_FLIPPED = True
 
 # Train bounding-box regressors
@@ -119,7 +125,9 @@ __C.TRAIN.PROPOSAL_METHOD = 'selective_search'
 # on zero-padding.
 __C.TRAIN.ASPECT_GROUPING = True
 
+
 # Use RPN to detect objects
+# 是否使用RPN检测目标
 __C.TRAIN.HAS_RPN = False
 # IOU >= thresh: positive example
 __C.TRAIN.RPN_POSITIVE_OVERLAP = 0.7
@@ -242,11 +250,12 @@ else:
 
 
 def get_output_dir(imdb, weights_filename):
-    """Return the directory where experimental artifacts are placed.
-    If the directory does not exist, it is created.
+    """
+        Return the directory where experimental artifacts are placed.
+        If the directory does not exist, it is created.
 
-    A canonical path is built using the name from an imdb and a network
-    (if not None).
+        A canonical path is built using the name from an imdb and a network
+        (if not None).
     """
     outdir = osp.abspath(osp.join(__C.ROOT_DIR, 'output', __C.EXP_DIR, imdb.name))
     if weights_filename is not None:
@@ -254,6 +263,7 @@ def get_output_dir(imdb, weights_filename):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     return outdir
+
 
 def _merge_a_into_b(a, b):
     """Merge config dictionary a into config dictionary b, clobbering the
@@ -287,6 +297,7 @@ def _merge_a_into_b(a, b):
         else:
             b[k] = v
 
+
 def cfg_from_file(filename):
     """Load a config file and merge it into the default options."""
     import yaml
@@ -294,6 +305,7 @@ def cfg_from_file(filename):
         yaml_cfg = edict(yaml.load(f))
 
     _merge_a_into_b(yaml_cfg, __C)
+
 
 def cfg_from_list(cfg_list):
     """Set config keys via list (e.g., from command line)."""

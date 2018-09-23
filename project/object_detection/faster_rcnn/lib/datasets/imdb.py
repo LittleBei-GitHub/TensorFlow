@@ -57,7 +57,7 @@ class imdb(object):
         method = eval('self.' + method + '_roidb')
         self.roidb_handler = method
 
-    @property
+    @property  # @property将类方法变成属性，可实现getter、setter作用
     def roidb(self):
         # A roidb is a list of dictionaries, each with the following keys:
         #   boxes
@@ -104,30 +104,32 @@ class imdb(object):
     def append_flipped_images(self):
         num_images = self.num_images
         widths = self._get_widths()
-        for i in xrange(num_images):
+        for i in xrange(num_images):   # 遍历每张图片
             boxes = self.roidb[i]['boxes'].copy()
             oldx1 = boxes[:, 0].copy()
             oldx2 = boxes[:, 2].copy()
             boxes[:, 0] = widths[i] - oldx2 - 1
             boxes[:, 2] = widths[i] - oldx1 - 1
             assert (boxes[:, 2] >= boxes[:, 0]).all()
-            entry = {'boxes' : boxes,
-                     'gt_overlaps' : self.roidb[i]['gt_overlaps'],
-                     'gt_classes' : self.roidb[i]['gt_classes'],
-                     'flipped' : True}
+            entry = {'boxes': boxes,
+                     'gt_overlaps': self.roidb[i]['gt_overlaps'],
+                     'gt_classes': self.roidb[i]['gt_classes'],
+                     'flipped': True}
             self.roidb.append(entry)
         self._image_index = self._image_index * 2
 
     def evaluate_recall(self, candidate_boxes=None, thresholds=None,
                         area='all', limit=None):
-        """Evaluate detection proposal recall metrics.
+        """
+            Evaluate detection proposal recall metrics.
 
-        Returns:
-            results: dictionary of results with keys
-                'ar': average recall
-                'recalls': vector recalls at each IoU overlap threshold
-                'thresholds': vector of IoU overlap thresholds
-                'gt_overlaps': vector of all ground-truth overlaps
+            Returns:
+                results: dictionary of results with keys
+                    'ar': average recall
+                    'recalls': vector recalls at each IoU overlap threshold
+                    'thresholds': vector of IoU overlap thresholds
+                    'gt_overlaps': vector of all ground-truth overlaps
+            计算召回率
         """
         # Record max overlap value for each gt box
         # Return vector of overlap values
@@ -209,6 +211,9 @@ class imdb(object):
                 'gt_overlaps': gt_overlaps}
 
     def create_roidb_from_box_list(self, box_list, gt_roidb):
+        """
+            通过box_list创建roi数据集
+        """
         assert len(box_list) == self.num_images, \
                 'Number of boxes must match number of ground-truth images'
         roidb = []
@@ -229,11 +234,11 @@ class imdb(object):
 
             overlaps = scipy.sparse.csr_matrix(overlaps)
             roidb.append({
-                'boxes' : boxes,
-                'gt_classes' : np.zeros((num_boxes,), dtype=np.int32),
-                'gt_overlaps' : overlaps,
-                'flipped' : False,
-                'seg_areas' : np.zeros((num_boxes,), dtype=np.float32),
+                'boxes': boxes,
+                'gt_classes': np.zeros((num_boxes,), dtype=np.int32),
+                'gt_overlaps': overlaps,
+                'flipped': False,
+                'seg_areas': np.zeros((num_boxes,), dtype=np.float32),
             })
         return roidb
 
