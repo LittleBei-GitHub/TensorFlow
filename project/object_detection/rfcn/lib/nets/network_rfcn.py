@@ -25,6 +25,7 @@ from model.config import cfg
 
 import pprint
 
+
 class Network(object):
     def __init__(self, batch_size=1):
         self._feat_stride = [16, ]
@@ -517,19 +518,25 @@ class Network(object):
     def create_architecture(self, sess, mode, num_classes, scope, tag=None,
                             anchor_scales=(8, 16, 32), anchor_ratios=(0.5, 1, 2), input_rois=None, roi_scores=None,
                             proposal_targets=None):
+        # 图像
         self._image = tf.placeholder(tf.float32, shape=[self._batch_size, None, None, 3])
+        # 图像信息
         self._im_info = tf.placeholder(tf.float32, shape=[self._batch_size, 3])
+        # ground truth boxes
         self._gt_boxes = tf.placeholder(tf.float32, shape=[None, 5])
+        #
         self._tag = tag
-
+        # 类别数量
         self._num_classes = num_classes
+        # train/test
         self._mode = mode
+        # 锚框范围
         self._anchor_scales = anchor_scales
         self._num_scales = len(anchor_scales)
-
+        # 锚框比例
         self._anchor_ratios = anchor_ratios
         self._num_ratios = len(anchor_ratios)
-
+        # 每个点的锚框个数
         self._num_anchors = self._num_scales * self._num_ratios
 
         training = mode == 'TRAIN'
@@ -545,8 +552,11 @@ class Network(object):
             biases_regularizer = tf.no_regularizer
 
         # list as many types of layers as possible, even if they are not used now
-        with arg_scope([slim.conv2d, slim.conv2d_in_plane, \
-                        slim.conv2d_transpose, slim.separable_conv2d, slim.fully_connected],
+        with arg_scope([slim.conv2d,
+                        slim.conv2d_in_plane,
+                        slim.conv2d_transpose,
+                        slim.separable_conv2d,
+                        slim.fully_connected],
                        weights_regularizer=weights_regularizer,
                        biases_regularizer=biases_regularizer,
                        biases_initializer=tf.constant_initializer(0.0)):

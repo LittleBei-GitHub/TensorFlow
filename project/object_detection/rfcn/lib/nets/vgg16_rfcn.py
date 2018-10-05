@@ -43,21 +43,23 @@ class Vgg16():
         rpn_head = slim.conv2d(self.vgg_head, 512, [3, 3], scope='rpn_layer_head')
         rpn_anchor_scores = slim.conv2d(rpn_head, 18, [1, 1], scope='rpn_layer_scores')
         rpn_anchor_scores_shape = self._get_shape(rpn_anchor_scores)
-        rpn_anchor_scores = tf.reshape(rpn_anchor_scores, shape=[rpn_anchor_scores_shape[0]*rpn_anchor_scores_shape[1]*
-                                       rpn_anchor_scores_shape[2]*9, 2])
+        rpn_anchor_scores = tf.reshape(rpn_anchor_scores,
+                                       shape=[rpn_anchor_scores_shape[0] * rpn_anchor_scores_shape[1] *
+                                              rpn_anchor_scores_shape[2] * 9, 2])
         rpn_anchor_scores_pred = tf.nn.softmax(rpn_anchor_scores)
         rpn_anchor_bboxes = slim.conv2d(self.vgg_head, 36, [1, 1], scope='rpn_layer_bboxes')
         rpn_anchor_bboxes_shape = self._get_shape(rpn_anchor_bboxes)
-        rpn_anchor_bboxes = tf.reshape(rpn_anchor_bboxes, shape=[rpn_anchor_bboxes_shape[0]*rpn_anchor_bboxes_shape[1]*
-                                                                 rpn_anchor_bboxes_shape[2]*9, -1])
+        rpn_anchor_bboxes = tf.reshape(rpn_anchor_bboxes,
+                                       shape=[rpn_anchor_bboxes_shape[0] * rpn_anchor_bboxes_shape[1] *
+                                              rpn_anchor_bboxes_shape[2] * 9, -1])
         self.rpn_scores = rpn_anchor_scores
         self.rpn_bboxes = rpn_anchor_bboxes
         self.rpn_pred = rpn_anchor_scores_pred
 
     def build_rfcn(self, rois):
         k = self.K
-        step_x = (rois[:, 2] - rois[:, 0])/k
-        step_y = (rois[:, 3] - rois[:, 1])/k
+        step_x = (rois[:, 2] - rois[:, 0]) / k
+        step_y = (rois[:, 3] - rois[:, 1]) / k
 
         inputs_height = self.inputs.shape.as_list()[1]
         inputs_width = self.inputs.shape.as_list()[2]
@@ -65,16 +67,16 @@ class Vgg16():
         total_boxes = []
         for y in range(k):
             for x in range(k):
-                ymin = (rois[:, 1] + y*step_y)/inputs_height
-                xmin = (rois[:, 0] + x*step_x)/inputs_width
-                ymax = (rois[:, 1] + (y+1)*step_y)/inputs_height
-                xmax = (rois[:, 0] + (x+1)*step_x)/inputs_width
+                ymin = (rois[:, 1] + y * step_y) / inputs_height
+                xmin = (rois[:, 0] + x * step_x) / inputs_width
+                ymax = (rois[:, 1] + (y + 1) * step_y) / inputs_height
+                xmax = (rois[:, 0] + (x + 1) * step_x) / inputs_width
                 boxes = tf.stop_gradient(tf.stack([ymin, xmin, ymax, xmax], axis=1))
                 total_boxes.append(boxes)
 
         # rfcn conv_layer
         rfcn_head = slim.conv2d(self.vgg_head, 512, [3, 3], scope='rfcn_layer_head')
-        rfcn_cls_scores = slim.conv2d(rfcn_head, 9*21, [3, 3], scope='rfcn_layer_cls_scores')
+        rfcn_cls_scores = slim.conv2d(rfcn_head, 9 * 21, [3, 3], scope='rfcn_layer_cls_scores')
         rfcn_scores_collections = tf.split(rfcn_cls_scores, 9, axis=3)
 
         rpn_crops = []
@@ -83,11 +85,11 @@ class Vgg16():
                                              box_ind=[0] * 5022,
                                              crop_size=[3, 3])
             rpn_crops.append(crops)
-        avg_crops = tf.add_n(rpn_crops)/len(rpn_crops)
+        avg_crops = tf.add_n(rpn_crops) / len(rpn_crops)
         rpn_scores = tf.reduce_mean(avg_crops, axis=[1, 2])
         rpn_pred = tf.nn.softmax(rpn_scores)
 
-        rfcn_bboxes = slim.conv2d(rfcn_head, 4*9, [1, 1], scope='rfcn_layer_bboxes')
+        rfcn_bboxes = slim.conv2d(rfcn_head, 4 * 9, [1, 1], scope='rfcn_layer_bboxes')
         rfcn_bboxes_regions = tf.split(rfcn_bboxes, 9, axis=3)
         total_boxes_crops = []
         for bboxes, features in zip(total_boxes, rfcn_bboxes_regions):
@@ -95,7 +97,7 @@ class Vgg16():
                                              box_ind=[0] * 5022,
                                              crop_size=[3, 3])
             total_boxes_crops.append(crops)
-        avg_bboxes = tf.add_n(total_boxes_crops)/len(total_boxes_crops)
+        avg_bboxes = tf.add_n(total_boxes_crops) / len(total_boxes_crops)
         avg_bboxes_scores = tf.reduce_mean(avg_bboxes, axis=[1, 2])
 
         self.rfcn_pred = rpn_pred
@@ -199,7 +201,6 @@ class Vgg16():
                             assign_ops.append(tf.assign(var_target, var))
                             break
 
-
         return assign_ops
 
 
@@ -216,7 +217,7 @@ if __name__ == '__main__':
     print(vgg_rpn.rpn_pred.shape.as_list())
     print(vgg_rpn.rfcn_pred.shape.as_list())
     print(vgg_rpn.rfcn_bbox_scores.shape.as_list())
-    print('==='*30)
+    print('===' * 30)
     vgg_rpn.loss()
     vgg_rpn.train_op_rpn('rpn_network')
     rpn_train_op = vgg_rpn.optimizer_rpn.apply_gradients(vgg_rpn.grpn)
@@ -237,15 +238,15 @@ if __name__ == '__main__':
     for key, val in vgg_rpn.grpn:
         print(key)
         print(val)
-    print('###'*30)
+    print('###' * 30)
     for key, val in vgg_rfcn.grfcn:
         print(key)
         print(val)
-    print('###'*30)
+    print('###' * 30)
     for key, val in vgg_rpn.grpn_stage3:
         print(key)
         print(val)
-    print('###'*30)
+    print('###' * 30)
     for key, val in vgg_rpn.grfcn_stage4:
         print(key)
         print(val)
@@ -268,7 +269,8 @@ if __name__ == '__main__':
         intpus_val = inputs_val.astype(np.float32, copy=False)
         inputs_val_rfcn = np.random.normal(size=[1, 600, 1000, 3])
         inputs_val_rfcn = inputs_val_rfcn.astype(np.float32, copy=False)
-        _, loss_rfcn, summary_ops = sess.run([rfcn_train_op, vgg_rfcn.loss_rfcn, merged_summary], feed_dict={vgg_rfcn.inputs: inputs_val_rfcn, vgg_rpn.inputs: inputs_val})
+        _, loss_rfcn, summary_ops = sess.run([rfcn_train_op, vgg_rfcn.loss_rfcn, merged_summary],
+                                             feed_dict={vgg_rfcn.inputs: inputs_val_rfcn, vgg_rpn.inputs: inputs_val})
         summary_writer.add_summary(summary_ops, global_step=i)
         print('step %d, loss of rfcn layers %f' % (i, loss_rfcn))
     print('====================================stage two finished=========================================')
@@ -368,14 +370,14 @@ if __name__ == '__main__':
                 inputs_val_rfcn = np.random.normal(size=[1, 600, 1000, 3])
                 inputs_val_rfcn = inputs_val_rfcn.astype(np.float32, copy=False)
                 _, loss_rpn_val = sess.run([rpn_train_op_stage3, vgg_rpn.loss_rpn],
-                                                        feed_dict={vgg_rpn.inputs: inputs_val_rfcn})
-                print('step %d, loss value is %f' %(i, loss_rpn_val))
+                                           feed_dict={vgg_rpn.inputs: inputs_val_rfcn})
+                print('step %d, loss value is %f' % (i, loss_rpn_val))
             print('====================================stage three finished=========================================')
         for i in range(100):
             inputs_val_rfcn = np.random.normal(size=[1, 600, 1000, 3])
             inputs_val_rfcn = inputs_val_rfcn.astype(np.float32, copy=False)
             _, loss_rpn_val = sess.run([rpn_train_op_stage4, vgg_rpn.loss_rfcn],
-                                                        feed_dict={vgg_rpn.inputs: inputs_val_rfcn})
+                                       feed_dict={vgg_rpn.inputs: inputs_val_rfcn})
             print('step %d, loss value is %f' % (i, loss_rpn_val))
         print('====================================stage four finished=========================================')
         for i in range(100):

@@ -3,8 +3,9 @@ from tensorflow.python.ops import array_ops
 
 slim = tf.contrib.slim
 
+
 def focal_loss(onehot_labels, cls_preds,
-                            alpha=0.25, gamma=2.0, name=None, scope=None):
+               alpha=0.25, gamma=2.0, name=None, scope=None):
     """Compute softmax focal loss between logits and onehot labels
     logits and onehot_labels must have same shape [batchsize, num_classes] and
     the same data type (float16, 32, 64)
@@ -22,16 +23,17 @@ def focal_loss(onehot_labels, cls_preds,
         onehot_labels = tf.convert_to_tensor(onehot_labels)
 
         precise_logits = tf.cast(logits, tf.float32) if (
-                        logits.dtype == tf.float16) else logits
+                logits.dtype == tf.float16) else logits
         onehot_labels = tf.cast(onehot_labels, precise_logits.dtype)
         predictions = tf.nn.sigmoid(logits)
-        predictions_pt = tf.where(tf.equal(onehot_labels, 1), predictions, 1.-predictions)
+        predictions_pt = tf.where(tf.equal(onehot_labels, 1), predictions, 1. - predictions)
         # add small value to avoid 0
         epsilon = 1e-8
         alpha_t = tf.scalar_mul(alpha, tf.ones_like(onehot_labels, dtype=tf.float32))
-        alpha_t = tf.where(tf.equal(onehot_labels, 1.0), alpha_t, 1-alpha_t)
-        losses = tf.reduce_sum(-alpha_t * tf.pow(1. - predictions_pt, gamma) * onehot_labels * tf.log(predictions_pt+epsilon),
-                                     name=name, axis=1)
+        alpha_t = tf.where(tf.equal(onehot_labels, 1.0), alpha_t, 1 - alpha_t)
+        losses = tf.reduce_sum(
+            -alpha_t * tf.pow(1. - predictions_pt, gamma) * onehot_labels * tf.log(predictions_pt + epsilon),
+            name=name, axis=1)
         return losses
 
 
@@ -99,7 +101,9 @@ def test():
         print(sess.run(focal_loss(onehot_labels=labels, cls_preds=logits)))
         print(sess.run(focal_loss2(target_tensor=labels, prediction_tensor=logits)))
         print(sess.run(focal_loss3(cls_score=logits, label=labels_vector, num_classes=4)))
-        print(sess.run(regression_loss(logits, bbox, tf.expand_dims(1./tf.convert_to_tensor([2, 3], dtype=tf.float32), 1))))
+        print(sess.run(
+            regression_loss(logits, bbox, tf.expand_dims(1. / tf.convert_to_tensor([2, 3], dtype=tf.float32), 1))))
     sess.close()
+
 
 test()

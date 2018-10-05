@@ -102,7 +102,7 @@ def bbox_transform_inv_tf(boxes, deltas):
     TF implementation of bbox_transform_inv. Note here we assume
     that boxes and deltas are always of shape (n, 4).
     """
-    boxes = tf.cast(boxes, deltas.dtype) # TODO maybe remove?
+    boxes = tf.cast(boxes, deltas.dtype)  # TODO maybe remove?
     widths = boxes[:, 2] - boxes[:, 0] + 1.0
     heights = boxes[:, 3] - boxes[:, 1] + 1.0
     ctr_x = boxes[:, 0] + 0.5 * widths
@@ -126,6 +126,6 @@ def bbox_transform_inv_tf(boxes, deltas):
         # x2
         pred_ctr_x + 0.5 * pred_w,
         # y2
-        pred_ctr_y + 0.5 * pred_h,]))
+        pred_ctr_y + 0.5 * pred_h, ]))
 
     return pred_boxes

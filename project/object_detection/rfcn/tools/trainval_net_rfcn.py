@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # --------------------------------------------------------
 # Tensorflow Faster R-CNN
 # Licensed under The MIT License [see LICENSE for details]
@@ -18,108 +20,110 @@ import sys
 
 from nets.resnet_v1_rfcn_hole_iterator4 import resnetv1
 
+
 def parse_args():
-  """
-  Parse input arguments
-  """
-  parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
-  parser.add_argument('--cfg', dest='cfg_file',
-                      help='optional config file',
-                      default=None, type=str)
-  parser.add_argument('--weight', dest='weight',
-                      help='initialize with pretrained model weights',
-                      type=str)
-  parser.add_argument('--imdb', dest='imdb_name',
-                      help='dataset to train on',
-                      default='voc_2007_trainval+voc_2012_trainval', type=str)
-  parser.add_argument('--imdbval', dest='imdbval_name',
-                      help='dataset to validate on',
-                      default='voc_2007_test', type=str)
-  parser.add_argument('--iters', dest='max_iters',
-                      help='number of iterations to train',
-                      default=400000, type=int)
-  parser.add_argument('--tag', dest='tag',
-                      help='tag of the model',
-                      default=None, type=str)
-  parser.add_argument('--net', dest='net',
-                      help='vgg16, res50, res101, res152',
-                      default='res101', type=str)
-  parser.add_argument('--set', dest='set_cfgs',
-                      help='set config keys', default=None,
-                      nargs=argparse.REMAINDER)
+    """
+        Parse input arguments
+    """
+    parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
+    parser.add_argument('--cfg', dest='cfg_file',
+                        help='optional config file',
+                        default=None, type=str)
+    parser.add_argument('--weight', dest='weight',
+                        help='initialize with pretrained model weights',
+                        type=str)
+    parser.add_argument('--imdb', dest='imdb_name',
+                        help='dataset to train on',
+                        default='voc_2007_trainval+voc_2012_trainval', type=str)
+    parser.add_argument('--imdbval', dest='imdbval_name',
+                        help='dataset to validate on',
+                        default='voc_2007_test', type=str)
+    parser.add_argument('--iters', dest='max_iters',
+                        help='number of iterations to train',
+                        default=400000, type=int)
+    parser.add_argument('--tag', dest='tag',
+                        help='tag of the model',
+                        default=None, type=str)
+    parser.add_argument('--net', dest='net',
+                        help='vgg16, res50, res101, res152',
+                        default='res101', type=str)
+    parser.add_argument('--set', dest='set_cfgs',
+                        help='set config keys', default=None,
+                        nargs=argparse.REMAINDER)
 
-  if len(sys.argv) == 1:
-    parser.print_help()
-    sys.exit(1)
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
 
-  args = parser.parse_args()
-  return args
+    args = parser.parse_args()
+    return args
 
 
 def combined_roidb(imdb_names):
-  """
-  Combine multiple roidbs
-  """
+    """
+        Combine multiple roidbs
+    """
+    def get_roidb(imdb_name):
+        imdb = get_imdb(imdb_name)  # 获取图像集
+        print('Loaded dataset `{:s}` for training'.format(imdb.name))
+        imdb.set_proposal_method(cfg.TRAIN.PROPOSAL_METHOD)
+        print('Set proposal method: {:s}'.format(cfg.TRAIN.PROPOSAL_METHOD))
+        # 获取groundtruth
+        roidb = get_training_roidb(imdb)
+        return roidb
 
-  def get_roidb(imdb_name):
-    imdb = get_imdb(imdb_name)
-    print('Loaded dataset `{:s}` for training'.format(imdb.name))
-    imdb.set_proposal_method(cfg.TRAIN.PROPOSAL_METHOD)
-    print('Set proposal method: {:s}'.format(cfg.TRAIN.PROPOSAL_METHOD))
-    roidb = get_training_roidb(imdb)
-    return roidb
-
-  roidbs = [get_roidb(s) for s in imdb_names.split('+')]
-  roidb = roidbs[0]
-  if len(roidbs) > 1:
-    for r in roidbs[1:]:
-      roidb.extend(r)
-    tmp = get_imdb(imdb_names.split('+')[1])
-    imdb = datasets.imdb.imdb(imdb_names, tmp.classes)
-  else:
-    imdb = get_imdb(imdb_names)
-  return imdb, roidb
+    roidbs = [get_roidb(s) for s in imdb_names.split('+')]
+    roidb = roidbs[0]
+    if len(roidbs) > 1:
+        for r in roidbs[1:]:
+            roidb.extend(r)
+        tmp = get_imdb(imdb_names.split('+')[1])
+        imdb = datasets.imdb.imdb(imdb_names, tmp.classes)
+    else:
+        imdb = get_imdb(imdb_names)
+    return imdb, roidb
 
 
 if __name__ == '__main__':
-  args = parse_args()
+    args = parse_args()
+    # 打印调用的参数
+    print('Called with args:')
+    print(args)
 
-  print('Called with args:')
-  print(args)
+    if args.cfg_file is not None:
+        cfg_from_file(args.cfg_file)
+    if args.set_cfgs is not None:
+        cfg_from_list(args.set_cfgs)
+    # 打印调用的配置
+    print('Using config:')
+    pprint.pprint(cfg)
 
-  if args.cfg_file is not None:
-    cfg_from_file(args.cfg_file)
-  if args.set_cfgs is not None:
-    cfg_from_list(args.set_cfgs)
+    np.random.seed(cfg.RNG_SEED)
 
-  print('Using config:')
-  pprint.pprint(cfg)
+    # train set(训练数据集)
+    imdb, roidb = combined_roidb(args.imdb_name)
+    print('{:d} roidb entrie s'.format(len(roidb)))
 
-  np.random.seed(cfg.RNG_SEED)
+    # output directory where the models are saved
+    # 模型存放的目录
+    output_dir = get_output_dir(imdb, args.tag)
+    print('Output will be saved to `{:s}`'.format(output_dir))
 
-  # train set
-  imdb, roidb = combined_roidb(args.imdb_name)
-  print('{:d} roidb entrie s'.format(len(roidb)))
+    # tensorboard directory where the summaries are saved during training
+    tb_dir = get_output_tb_dir(imdb, args.tag)
+    print('TensorFlow summaries will be saved to `{:s}`'.format(tb_dir))
 
-  # output directory where the models are saved
-  output_dir = get_output_dir(imdb, args.tag)
-  print('Output will be saved to `{:s}`'.format(output_dir))
+    # also add the validation set, but with no flipping images
+    orgflip = cfg.TRAIN.USE_FLIPPED
+    cfg.TRAIN.USE_FLIPPED = False
+    _, valroidb = combined_roidb(args.imdbval_name)
+    print('{:d} validation roidb entries'.format(len(valroidb)))
+    cfg.TRAIN.USE_FLIPPED = orgflip
 
-  # tensorboard directory where the summaries are saved during training
-  tb_dir = get_output_tb_dir(imdb, args.tag)
-  print('TensorFlow summaries will be saved to `{:s}`'.format(tb_dir))
+    # load network
+    rpn_net = resnetv1(batch_size=cfg.TRAIN.IMS_PER_BATCH, num_layers=101)
+    rfcn_net = resnetv1(batch_size=cfg.TRAIN.IMS_PER_BATCH, num_layers=101)
 
-  # also add the validation set, but with no flipping images
-  orgflip = cfg.TRAIN.USE_FLIPPED
-  cfg.TRAIN.USE_FLIPPED = False
-  _, valroidb = combined_roidb(args.imdbval_name)
-  print('{:d} validation roidb entries'.format(len(valroidb)))
-  cfg.TRAIN.USE_FLIPPED = orgflip
-
-  # load network
-  rpn_net = resnetv1(batch_size=cfg.TRAIN.IMS_PER_BATCH, num_layers=101)
-  rfcn_net = resnetv1(batch_size=cfg.TRAIN.IMS_PER_BATCH, num_layers=101)
-
-  train_net(rpn_net, rfcn_net, imdb, roidb, valroidb, output_dir, tb_dir,
-            pretrained_model=args.weight,
-            max_iters=args.max_iters)
+    train_net(rpn_net, rfcn_net, imdb, roidb, valroidb, output_dir, tb_dir,
+              pretrained_model=args.weight,
+              max_iters=args.max_iters)

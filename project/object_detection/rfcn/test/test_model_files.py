@@ -16,8 +16,10 @@ from model.config import cfg, get_output_dir
 from utils.cython_nms import nms, nms_new
 from model.test import test_net
 
+
 class Timer(object):
     """A simple timer."""
+
     def __init__(self):
         self.total_time = 0.
         self.calls = 0
@@ -41,98 +43,96 @@ class Timer(object):
             return self.diff
 
 
-
 def parse_args():
-  """
-  Parse input arguments
-  """
-  parser = argparse.ArgumentParser(description='Test a Fast R-CNN network')
-  parser.add_argument('--cfg', dest='cfg_file',
-            help='optional config file', default=None, type=str)
-  parser.add_argument('--model', dest='model',
-            help='model to test',
-            default=None, type=str)
-  parser.add_argument('--imdb', dest='imdb_name',
-            help='dataset to test',
-            default='voc_2007_test', type=str)
-  parser.add_argument('--comp', dest='comp_mode', help='competition mode',
-            action='store_true')
-  parser.add_argument('--num_dets', dest='max_per_image',
-            help='max number of detections per image',
-            default=100, type=int)
-  parser.add_argument('--tag', dest='tag',
+    """
+    Parse input arguments
+    """
+    parser = argparse.ArgumentParser(description='Test a Fast R-CNN network')
+    parser.add_argument('--cfg', dest='cfg_file',
+                        help='optional config file', default=None, type=str)
+    parser.add_argument('--model', dest='model',
+                        help='model to test',
+                        default=None, type=str)
+    parser.add_argument('--imdb', dest='imdb_name',
+                        help='dataset to test',
+                        default='voc_2007_test', type=str)
+    parser.add_argument('--comp', dest='comp_mode', help='competition mode',
+                        action='store_true')
+    parser.add_argument('--num_dets', dest='max_per_image',
+                        help='max number of detections per image',
+                        default=100, type=int)
+    parser.add_argument('--tag', dest='tag',
                         help='tag of the model',
                         default='', type=str)
-  parser.add_argument('--net', dest='net',
-                      help='vgg16, res50, res101, res152, mobile',
-                      default='res101', type=str)
-  parser.add_argument('--set', dest='set_cfgs',
+    parser.add_argument('--net', dest='net',
+                        help='vgg16, res50, res101, res152, mobile',
+                        default='res101', type=str)
+    parser.add_argument('--set', dest='set_cfgs',
                         help='set config keys', default=None,
                         nargs=argparse.REMAINDER)
 
-  if len(sys.argv) == 1:
-    parser.print_help()
-    sys.exit(1)
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
 
-  args = parser.parse_args()
-  return args
+    args = parser.parse_args()
+    return args
+
 
 def _clip_boxes(boxes, im_shape):
-  """Clip boxes to image boundaries."""
-  # x1 >= 0
-  boxes[:, 0::4] = np.maximum(boxes[:, 0::4], 0)
-  # y1 >= 0
-  boxes[:, 1::4] = np.maximum(boxes[:, 1::4], 0)
-  # x2 < im_shape[1]
-  boxes[:, 2::4] = np.minimum(boxes[:, 2::4], im_shape[1] - 1)
-  # y2 < im_shape[0]
-  boxes[:, 3::4] = np.minimum(boxes[:, 3::4], im_shape[0] - 1)
-  return boxes
-
+    """Clip boxes to image boundaries."""
+    # x1 >= 0
+    boxes[:, 0::4] = np.maximum(boxes[:, 0::4], 0)
+    # y1 >= 0
+    boxes[:, 1::4] = np.maximum(boxes[:, 1::4], 0)
+    # x2 < im_shape[1]
+    boxes[:, 2::4] = np.minimum(boxes[:, 2::4], im_shape[1] - 1)
+    # y2 < im_shape[0]
+    boxes[:, 3::4] = np.minimum(boxes[:, 3::4], im_shape[0] - 1)
+    return boxes
 
 
 def _get_blobs(im):
-  """Convert an image and RoIs within that image into network inputs."""
-  blobs = {}
-  blobs['data'], im_scale_factors = _get_image_blob(im)
+    """Convert an image and RoIs within that image into network inputs."""
+    blobs = {}
+    blobs['data'], im_scale_factors = _get_image_blob(im)
 
-  return blobs, im_scale_factors
-
+    return blobs, im_scale_factors
 
 
 def _get_image_blob(im):
-  """Converts an image into a network input.
-  Arguments:
-    im (ndarray): a color image in BGR order
-  Returns:
-    blob (ndarray): a data blob holding an image pyramid
-    im_scale_factors (list): list of image scales (relative to im) used
-      in the image pyramid
-  """
-  im_orig = im.astype(np.float32, copy=True)
-  im_orig -= cfg.PIXEL_MEANS
+    """Converts an image into a network input.
+    Arguments:
+      im (ndarray): a color image in BGR order
+    Returns:
+      blob (ndarray): a data blob holding an image pyramid
+      im_scale_factors (list): list of image scales (relative to im) used
+        in the image pyramid
+    """
+    im_orig = im.astype(np.float32, copy=True)
+    im_orig -= cfg.PIXEL_MEANS
 
-  im_shape = im_orig.shape
-  im_size_min = np.min(im_shape[0:2])
-  im_size_max = np.max(im_shape[0:2])
+    im_shape = im_orig.shape
+    im_size_min = np.min(im_shape[0:2])
+    im_size_max = np.max(im_shape[0:2])
 
-  processed_ims = []
-  im_scale_factors = []
+    processed_ims = []
+    im_scale_factors = []
 
-  for target_size in cfg.TEST.SCALES:
-    im_scale = float(target_size) / float(im_size_min)
-    # Prevent the biggest axis from being more than MAX_SIZE
-    if np.round(im_scale * im_size_max) > cfg.TEST.MAX_SIZE:
-      im_scale = float(cfg.TEST.MAX_SIZE) / float(im_size_max)
-    im = cv2.resize(im_orig, None, None, fx=im_scale, fy=im_scale,
-            interpolation=cv2.INTER_LINEAR)
-    im_scale_factors.append(im_scale)
-    processed_ims.append(im)
+    for target_size in cfg.TEST.SCALES:
+        im_scale = float(target_size) / float(im_size_min)
+        # Prevent the biggest axis from being more than MAX_SIZE
+        if np.round(im_scale * im_size_max) > cfg.TEST.MAX_SIZE:
+            im_scale = float(cfg.TEST.MAX_SIZE) / float(im_size_max)
+        im = cv2.resize(im_orig, None, None, fx=im_scale, fy=im_scale,
+                        interpolation=cv2.INTER_LINEAR)
+        im_scale_factors.append(im_scale)
+        processed_ims.append(im)
 
-  # Create a blob to hold the input images
-  blob = im_list_to_blob(processed_ims)
+    # Create a blob to hold the input images
+    blob = im_list_to_blob(processed_ims)
 
-  return blob, np.array(im_scale_factors)
+    return blob, np.array(im_scale_factors)
 
 
 if __name__ == '__main__':
@@ -168,8 +168,6 @@ if __name__ == '__main__':
 
     # init session
     sess = tf.Session(config=tfconfig)
-
-
 
     net = resnetv1(num_layers=101)
 

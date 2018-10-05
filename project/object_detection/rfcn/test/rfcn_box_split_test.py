@@ -4,10 +4,10 @@ import tensorflow as tf
 
 def _normalize(rois, height, width):
     xmin, ymin, xmax, ymax = tf.unstack(rois, axis=1)
-    xmin = xmin/width
-    ymin = ymin/height
-    xmax = xmax/width
-    ymax = ymax/height
+    xmin = xmin / width
+    ymin = ymin / height
+    xmax = xmax / width
+    ymax = ymax / height
     return tf.stack([xmin, ymin, xmax, ymax], axis=1)
 
 
@@ -24,10 +24,10 @@ def _grid_features(imgs, tf_rois):
     gt_rois = []
     for biny in range(bins):
         for binx in range(bins):
-            sub_rois = [ymin + stepy*biny,
-                        xmin + stepx*binx,
-                        ymin + stepy*(biny + 1),
-                        xmin + stepx*(binx + 1)]
+            sub_rois = [ymin + stepy * biny,
+                        xmin + stepx * binx,
+                        ymin + stepy * (biny + 1),
+                        xmin + stepx * (binx + 1)]
             tf_sub_rois = tf.stack(sub_rois, axis=1)
             gt_rois.append(tf_sub_rois)
     total_crops = []
@@ -58,5 +58,4 @@ if __name__ == '__main__':
 
     for crop in total_crops_tf:
         print(sess.run(tf.squeeze(crop, axis=[3])))
-        print('==='*10)
-
+        print('===' * 10)
