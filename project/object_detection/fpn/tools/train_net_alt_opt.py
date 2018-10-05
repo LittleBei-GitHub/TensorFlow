@@ -1,4 +1,3 @@
-
 # --------------------------------------------------------
 # Fast R-CNN
 # Copyright (c) 2015 Microsoft
@@ -25,6 +24,7 @@ from lib.fast_rcnn.config import cfg, cfg_from_file, cfg_from_list, get_output_d
 from lib.datasets.factory import get_imdb
 from lib.networks.factory import get_network
 from lib.fast_rcnn.config import cfg
+
 
 def parse_args():
     """
@@ -60,6 +60,7 @@ def parse_args():
     args = parser.parse_args()
     return args
 
+
 if __name__ == '__main__':
     args = parse_args()
 
@@ -78,9 +79,9 @@ if __name__ == '__main__':
     if not args.randomize:
         # fix the random seeds (numpy and caffe) for reproducibility
         np.random.seed(cfg.RNG_SEED)
-    #imdb = get_imdb(args.imdb_name)
-    #print 'Loaded dataset `{:s}` for training'.format(imdb.name)
-    #roidb = get_training_roidb(imdb)
+    # imdb = get_imdb(args.imdb_name)
+    # print 'Loaded dataset `{:s}` for training'.format(imdb.name)
+    # roidb = get_training_roidb(imdb)
 
     '''
     output_dir = get_output_dir(imdb, None)
@@ -101,8 +102,8 @@ if __name__ == '__main__':
                 ['Fast-RCNN']]
 
     max_iters = [200000, 100000, 200000, 100000]
-    #max_iters = [80000, 40000, 80000, 40000]
-    #max_iters = [80, 40, 80, 40]
+    # max_iters = [80000, 40000, 80000, 40000]
+    # max_iters = [80, 40, 80, 40]
 
     train_net(network, args.imdb_name, vs_names,
               pretrained_model=args.pretrained_model,

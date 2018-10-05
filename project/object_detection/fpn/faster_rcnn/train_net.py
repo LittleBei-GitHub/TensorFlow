@@ -1,4 +1,3 @@
-
 # --------------------------------------------------------
 # Fast R-CNN
 # Copyright (c) 2015 Microsoft
@@ -25,6 +24,7 @@ from lib.fast_rcnn.config import cfg, cfg_from_file, cfg_from_list, get_output_d
 from lib.datasets.factory import get_imdb
 from lib.networks.factory import get_network
 from lib.fast_rcnn.config import cfg
+
 
 def parse_args():
     """
@@ -68,6 +68,7 @@ def parse_args():
 
     args = parser.parse_args()
     return args
+
 
 if __name__ == '__main__':
     args = parse_args()

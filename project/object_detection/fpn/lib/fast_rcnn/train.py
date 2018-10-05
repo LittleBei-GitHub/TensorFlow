@@ -21,9 +21,11 @@ from ..roi_data_layer import roidb as rdl_roidb
 # >>>> obsolete, because it depends on sth outside of this project
 from ..fast_rcnn.config import cfg
 from ..fast_rcnn.bbox_transform import clip_boxes, bbox_transform_inv
+
 # <<<< obsolete
 
 _DEBUG = False
+
 
 class SolverWrapper(object):
     """A simple wrapper around Caffe's solver.
@@ -47,8 +49,8 @@ class SolverWrapper(object):
         # For checkpoint
         self.saver = tf.train.Saver(max_to_keep=100)
         self.writer = tf.summary.FileWriter(logdir=logdir,
-                                             graph=tf.get_default_graph(),
-                                             flush_secs=5)
+                                            graph=tf.get_default_graph(),
+                                            flush_secs=5)
 
     def snapshot(self, sess, iter):
         """Take a snapshot of the network after unnormalizing the learned
@@ -68,7 +70,7 @@ class SolverWrapper(object):
 
             # scale and shift with bbox reg unnormalization; then save snapshot
             weights_shape = weights.get_shape().as_list()
-            sess.run(weights.assign(orig_0 * np.tile(self.bbox_stds, (weights_shape[0],1))))
+            sess.run(weights.assign(orig_0 * np.tile(self.bbox_stds, (weights_shape[0], 1))))
             sess.run(biases.assign(orig_1 * self.bbox_stds + self.bbox_means))
 
         if not os.path.exists(self.output_dir):
@@ -77,7 +79,7 @@ class SolverWrapper(object):
         infix = ('_' + cfg.TRAIN.SNAPSHOT_INFIX
                  if cfg.TRAIN.SNAPSHOT_INFIX != '' else '')
         filename = (cfg.TRAIN.SNAPSHOT_PREFIX + infix +
-                    '_iter_{:d}'.format(iter+1) + '.ckpt')
+                    '_iter_{:d}'.format(iter + 1) + '.ckpt')
         filename = os.path.join(self.output_dir, filename)
 
         self.saver.save(sess, filename)
@@ -103,14 +105,13 @@ class SolverWrapper(object):
         # log_image = tf.summary.image(log_image_name, tf.expand_dims(log_image_data, 0), max_outputs=1)
         return log_image, log_image_data, log_image_name
 
-
     def train_model(self, sess, max_iters, restore=False):
         """Network training loop."""
 
         data_layer = get_data_layer(self.roidb, self.imdb.num_classes)
 
         loss, cross_entropy, loss_box, rpn_cross_entropy, rpn_loss_box, \
-                                       = self.net.build_loss()
+            = self.net.build_loss()
 
         # scalar summary
         tf.summary.scalar('cls_loss', cross_entropy)
@@ -122,7 +123,7 @@ class SolverWrapper(object):
 
         # image writer
         # NOTE: this image is independent to summary_op
-        log_image, log_image_data, log_image_name =\
+        log_image, log_image_data, log_image_name = \
             self.build_image_summary()
 
         # optimizer
@@ -158,7 +159,7 @@ class SolverWrapper(object):
         if self.pretrained_model is not None and not restore:
             try:
                 print ('Loading pretrained model '
-                   'weights from {:s}').format(self.pretrained_model)
+                       'weights from {:s}').format(self.pretrained_model)
                 self.net.load(self.pretrained_model, sess, True)
             except:
                 raise 'Check your pretrained model {:s}'.format(self.pretrained_model)
@@ -191,9 +192,9 @@ class SolverWrapper(object):
             blobs = data_layer.forward()
 
             if (iter + 1) % (cfg.TRAIN.DISPLAY) == 0:
-                print 'image: %s' %(blobs['im_name']),
+                print 'image: %s' % (blobs['im_name']),
 
-            feed_dict={
+            feed_dict = {
                 self.net.data: blobs['data'],
                 self.net.im_info: blobs['im_info'],
                 self.net.keep_prob: 0.5,
@@ -203,7 +204,7 @@ class SolverWrapper(object):
             }
 
             res_fetches = [self.net.get_output('cls_prob'),  # FRCNN class prob
-                           self.net.get_output('bbox_pred'), # FRCNN rgs output
+                           self.net.get_output('bbox_pred'),  # FRCNN rgs output
                            self.net.get_output('rois')]  # RPN rgs output
 
             fetch_list = [rpn_cross_entropy,
@@ -239,14 +240,15 @@ class SolverWrapper(object):
                               loss_box,
                               summary_op] + res_fetches
 
-                fetch_list += [self.net.get_output('rpn_cls_score_reshape'), self.net.get_output('rpn_cls_prob_reshape')]
+                fetch_list += [self.net.get_output('rpn_cls_score_reshape'),
+                               self.net.get_output('rpn_cls_prob_reshape')]
 
                 fetch_list += []
                 rpn_loss_cls_value, rpn_loss_box_value, loss_cls_value, loss_box_value, \
                 summary_str, \
                 cls_prob, bbox_pred, rois, \
-                rpn_cls_score_reshape_np, rpn_cls_prob_reshape_np\
-                        =  sess.run(fetches=fetch_list, feed_dict=feed_dict)
+                rpn_cls_score_reshape_np, rpn_cls_prob_reshape_np \
+                    = sess.run(fetches=fetch_list, feed_dict=feed_dict)
             else:
                 fetch_list = [rpn_cross_entropy,
                               rpn_loss_box,
@@ -258,7 +260,7 @@ class SolverWrapper(object):
                 fetch_list += []
                 rpn_loss_cls_value, rpn_loss_box_value, loss_cls_value, loss_box_value, \
                 summary_str, _, \
-                cls_prob, bbox_pred, rois =  sess.run(fetches=fetch_list, feed_dict=feed_dict)
+                cls_prob, bbox_pred, rois = sess.run(fetches=fetch_list, feed_dict=feed_dict)
 
             self.writer.add_summary(summary=summary_str, global_step=global_step.eval())
 
@@ -279,25 +281,26 @@ class SolverWrapper(object):
                 boxes, scores = _process_boxes_scores(cls_prob, bbox_pred, rois, blobs['im_info'][0][2], ori_im.shape)
                 res = nms_wrapper(scores, boxes, threshold=0.7)
                 image = cv2.cvtColor(_draw_boxes_to_image(ori_im, res), cv2.COLOR_BGR2RGB)
-                log_image_name_str = ('%06d_' % iter ) + blobs['im_name']
+                log_image_name_str = ('%06d_' % iter) + blobs['im_name']
                 log_image_summary_op = \
                     sess.run(log_image, \
-                             feed_dict={log_image_name: log_image_name_str,\
+                             feed_dict={log_image_name: log_image_name_str, \
                                         log_image_data: image})
                 self.writer.add_summary(log_image_summary_op, global_step=global_step.eval())
 
             if (iter) % (cfg.TRAIN.DISPLAY) == 0:
-                print 'iter: %d / %d, total loss: %.4f, rpn_loss_cls: %.4f, rpn_loss_box: %.4f, loss_cls: %.4f, loss_box: %.4f, lr: %f'%\
-                        (iter, max_iters, rpn_loss_cls_value + rpn_loss_box_value + loss_cls_value + loss_box_value ,\
-                         rpn_loss_cls_value, rpn_loss_box_value,loss_cls_value, loss_box_value, lr.eval())
+                print 'iter: %d / %d, total loss: %.4f, rpn_loss_cls: %.4f, rpn_loss_box: %.4f, loss_cls: %.4f, loss_box: %.4f, lr: %f' % \
+                      (iter, max_iters, rpn_loss_cls_value + rpn_loss_box_value + loss_cls_value + loss_box_value, \
+                       rpn_loss_cls_value, rpn_loss_box_value, loss_cls_value, loss_box_value, lr.eval())
                 print 'speed: {:.3f}s / iter'.format(_diff_time)
 
-            if (iter+1) % cfg.TRAIN.SNAPSHOT_ITERS == 0:
+            if (iter + 1) % cfg.TRAIN.SNAPSHOT_ITERS == 0:
                 last_snapshot_iter = iter
                 self.snapshot(sess, iter)
 
         if last_snapshot_iter != iter:
             self.snapshot(sess, iter)
+
 
 def get_training_roidb(imdb):
     """Returns a roidb (Region of Interest database) for use in training."""
@@ -336,11 +339,12 @@ def get_data_layer(roidb, num_classes):
 
     return layer
 
+
 def _process_boxes_scores(cls_prob, bbox_pred, rois, im_scale, im_shape):
     """
     process the output tensors, to get the boxes and scores
     """
-    assert rois.shape[0] == bbox_pred.shape[0],\
+    assert rois.shape[0] == bbox_pred.shape[0], \
         'rois and bbox_pred must have the same shape'
     boxes = rois[:, 1:5]
     scores = cls_prob
@@ -354,10 +358,11 @@ def _process_boxes_scores(cls_prob, bbox_pred, rois, im_scale, im_shape):
         pred_boxes = clip_boxes(boxes, im_shape)
     return pred_boxes, scores
 
+
 def _draw_boxes_to_image(im, res):
-    colors = [(86, 0, 240), (173, 225, 61), (54, 137, 255),\
-              (151, 0, 255), (243, 223, 48), (0, 117, 255),\
-              (58, 184, 14), (86, 67, 140), (121, 82, 6),\
+    colors = [(86, 0, 240), (173, 225, 61), (54, 137, 255), \
+              (151, 0, 255), (243, 223, 48), (0, 117, 255), \
+              (58, 184, 14), (86, 67, 140), (121, 82, 6), \
               (174, 29, 128), (115, 154, 81), (86, 255, 234)]
     font = cv2.FONT_HERSHEY_SIMPLEX
     image = np.copy(im)
@@ -373,6 +378,7 @@ def _draw_boxes_to_image(im, res):
             cnt = (cnt + 1)
     return image
 
+
 def _draw_gt_to_image(im, gt_boxes, gt_ishard):
     image = np.copy(im)
 
@@ -384,6 +390,7 @@ def _draw_gt_to_image(im, gt_boxes, gt_ishard):
             cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), (255, 0, 0), 2)
     return image
 
+
 def _draw_dontcare_to_image(im, dontcare):
     image = np.copy(im)
 
@@ -391,7 +398,6 @@ def _draw_dontcare_to_image(im, dontcare):
         (x1, y1, x2, y2) = dontcare[i, :]
         cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
     return image
-
 
 
 def train_net(network, imdb, roidb, output_dir, log_dir, pretrained_model=None, max_iters=40000, restore=False):
@@ -402,7 +408,7 @@ def train_net(network, imdb, roidb, output_dir, log_dir, pretrained_model=None, 
     config.gpu_options.allow_growth = True
     config.gpu_options.per_process_gpu_memory_fraction = 0.90
     with tf.Session(config=config) as sess:
-        sw = SolverWrapper(sess, network, imdb, roidb, output_dir, logdir= log_dir, pretrained_model=pretrained_model)
+        sw = SolverWrapper(sess, network, imdb, roidb, output_dir, logdir=log_dir, pretrained_model=pretrained_model)
         print 'Solving...'
         sw.train_model(sess, max_iters, restore=restore)
         print 'done solving'

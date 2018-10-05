@@ -17,9 +17,11 @@ from ..utils.cython_bbox import bbox_overlaps, bbox_intersections
 # >>>> obsolete, because it depends on sth outside of this project
 from ..fast_rcnn.config import cfg
 from ..fast_rcnn.bbox_transform import bbox_transform
+
 # <<<< obsolete
 
 DEBUG = False
+
 
 def anchor_target_layer(rpn_cls_score_P2, \
                         rpn_cls_score_P3, \
@@ -27,8 +29,8 @@ def anchor_target_layer(rpn_cls_score_P2, \
                         rpn_cls_score_P5, \
                         rpn_cls_score_P6, \
                         gt_boxes, gt_ishard, dontcare_areas, im_info, \
-                        _feat_strides = [4, 8, 16, 32, 64], \
-                        anchor_sizes = [32, 64, 128, 256, 512]): # anchor_scales = [8, 8, 8, 8, 8]
+                        _feat_strides=[4, 8, 16, 32, 64], \
+                        anchor_sizes=[32, 64, 128, 256, 512]):  # anchor_scales = [8, 8, 8, 8, 8]
     """
     Assign anchors to ground-truth targets. Produces anchor classification
     labels and bounding-box regression targets.
@@ -81,7 +83,8 @@ def anchor_target_layer(rpn_cls_score_P2, \
     all_anchors_list = []
     total_anchors_sum = 0
 
-    for idx, rpn_cls_score in enumerate([rpn_cls_score_P2, rpn_cls_score_P3, rpn_cls_score_P4, rpn_cls_score_P5, rpn_cls_score_P6]):
+    for idx, rpn_cls_score in enumerate(
+            [rpn_cls_score_P2, rpn_cls_score_P3, rpn_cls_score_P4, rpn_cls_score_P5, rpn_cls_score_P6]):
 
         assert rpn_cls_score.shape[0] == 1, \
             'Only single item batches are supported'
@@ -101,7 +104,7 @@ def anchor_target_layer(rpn_cls_score_P2, \
         # 1. Generate proposals from bbox deltas and shifted anchors
         shift_x = np.arange(0, width) * _feat_strides[idx]
         shift_y = np.arange(0, height) * _feat_strides[idx]
-        shift_x, shift_y = np.meshgrid(shift_x, shift_y) # in W H order
+        shift_x, shift_y = np.meshgrid(shift_x, shift_y)  # in W H order
         # K is H x W
         shifts = np.vstack((shift_x.ravel(), shift_y.ravel(),
                             shift_x.ravel(), shift_y.ravel())).transpose()
@@ -122,9 +125,9 @@ def anchor_target_layer(rpn_cls_score_P2, \
     all_anchors = np.concatenate(all_anchors_list, axis=0)
     total_anchors = total_anchors_sum
     assert total_anchors == all_anchors.shape[0], \
-            'total_anchors should equal to all_anchors.shape()[0], but not'
+        'total_anchors should equal to all_anchors.shape()[0], but not'
 
-    #------------------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------------------
 
     # only keep anchors inside the image
     inds_inside = [ind for ind in xrange(total_anchors)]
@@ -140,7 +143,7 @@ def anchor_target_layer(rpn_cls_score_P2, \
 
     # label: 1 is positive, 0 is negative, -1 is dont care
     # (A)
-    labels = np.empty((len(inds_inside), ), dtype=np.float32)
+    labels = np.empty((len(inds_inside),), dtype=np.float32)
     labels.fill(-1)
 
     # overlaps between the anchors and the gt boxes
@@ -148,9 +151,9 @@ def anchor_target_layer(rpn_cls_score_P2, \
     overlaps = bbox_overlaps(
         np.ascontiguousarray(anchors, dtype=np.float),
         np.ascontiguousarray(gt_boxes, dtype=np.float))
-    argmax_overlaps = overlaps.argmax(axis=1) # (A)
+    argmax_overlaps = overlaps.argmax(axis=1)  # (A)
     max_overlaps = overlaps[np.arange(len(inds_inside)), argmax_overlaps]
-    gt_argmax_overlaps = overlaps.argmax(axis=0) # G
+    gt_argmax_overlaps = overlaps.argmax(axis=0)  # G
     gt_max_overlaps = overlaps[gt_argmax_overlaps,
                                np.arange(overlaps.shape[1])]
     gt_argmax_overlaps = np.where(overlaps == gt_max_overlaps)[0]
@@ -172,10 +175,10 @@ def anchor_target_layer(rpn_cls_score_P2, \
     if dontcare_areas is not None and dontcare_areas.shape[0] > 0:
         # intersec shape is D x A
         intersecs = bbox_intersections(
-            np.ascontiguousarray(dontcare_areas, dtype=np.float), # D x 4
-            np.ascontiguousarray(anchors, dtype=np.float) # A x 4
+            np.ascontiguousarray(dontcare_areas, dtype=np.float),  # D x 4
+            np.ascontiguousarray(anchors, dtype=np.float)  # A x 4
         )
-        intersecs_ = intersecs.sum(axis=0) # A x 1
+        intersecs_ = intersecs.sum(axis=0)  # A x 1
         labels[intersecs_ > cfg.TRAIN.DONTCARE_AREA_INTERSECTION_HI] = -1
 
     # preclude hard samples that are highly occlusioned, truncated or difficult to see
@@ -186,12 +189,12 @@ def anchor_target_layer(rpn_cls_score_P2, \
         if gt_hardboxes.shape[0] > 0:
             # H x A
             hard_overlaps = bbox_overlaps(
-                np.ascontiguousarray(gt_hardboxes, dtype=np.float), # H x 4
-                np.ascontiguousarray(anchors, dtype=np.float)) # A x 4
+                np.ascontiguousarray(gt_hardboxes, dtype=np.float),  # H x 4
+                np.ascontiguousarray(anchors, dtype=np.float))  # A x 4
             hard_max_overlaps = hard_overlaps.max(axis=0)  # (A)
             labels[hard_max_overlaps >= cfg.TRAIN.RPN_POSITIVE_OVERLAP] = -1
-            max_intersec_label_inds = hard_overlaps.argmax(axis=1) # H x 1
-            labels[max_intersec_label_inds] = -1 #
+            max_intersec_label_inds = hard_overlaps.argmax(axis=1)  # H x 1
+            labels[max_intersec_label_inds] = -1  #
 
     # subsample positive labels if we have too many
     num_fg = int(cfg.TRAIN.RPN_FG_FRACTION * cfg.TRAIN.RPN_BATCHSIZE)
@@ -208,10 +211,10 @@ def anchor_target_layer(rpn_cls_score_P2, \
         disable_inds = npr.choice(
             bg_inds, size=(len(bg_inds) - num_bg), replace=False)
         labels[disable_inds] = -1
-        #print "was %s inds, disabling %s, now %s inds" % (
-            #len(bg_inds), len(disable_inds), np.sum(labels == 0))
+        # print "was %s inds, disabling %s, now %s inds" % (
+        # len(bg_inds), len(disable_inds), np.sum(labels == 0))
 
-#    print "fg: {:d}, bg: {:d}, disabled: {:d}".format(np.sum(labels == 1), np.sum(labels == 0), np.sum(labels == -1))
+    #    print "fg: {:d}, bg: {:d}, disabled: {:d}".format(np.sum(labels == 1), np.sum(labels == 0), np.sum(labels == -1))
 
     bbox_targets = np.zeros((len(inds_inside), 4), dtype=np.float32)
     bbox_targets = _compute_targets(anchors, gt_boxes[argmax_overlaps, :])
@@ -272,16 +275,15 @@ def anchor_target_layer(rpn_cls_score_P2, \
     return rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights
 
 
-
 def _unmap(data, count, inds, fill=0):
     """ Unmap a subset of item (data) back to the original set of items (of
     size count) """
     if len(data.shape) == 1:
-        ret = np.empty((count, ), dtype=np.float32)
+        ret = np.empty((count,), dtype=np.float32)
         ret.fill(fill)
         ret[inds] = data
     else:
-        ret = np.empty((count, ) + data.shape[1:], dtype=np.float32)
+        ret = np.empty((count,) + data.shape[1:], dtype=np.float32)
         ret.fill(fill)
         ret[inds, :] = data
     return ret

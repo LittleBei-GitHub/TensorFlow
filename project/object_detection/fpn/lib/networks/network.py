@@ -7,16 +7,19 @@ from ..rpn_msr.proposal_layer import proposal_layer as proposal_layer_py
 from ..rpn_msr.anchor_target_layer import anchor_target_layer as anchor_target_layer_py
 from ..rpn_msr.proposal_target_layer import proposal_target_layer as proposal_target_layer_py
 
-
 DEFAULT_PADDING = 'SAME'
+
 
 def include_original(dec):
     """ Meta decorator, which make the original function callable (via f._original() )"""
+
     def meta_decorator(f):
         decorated = dec(f)
         decorated._original = f
         return decorated
+
     return meta_decorator
+
 
 @include_original
 def layer(op):
@@ -24,9 +27,9 @@ def layer(op):
         # Automatically set a name if not provided.
         name = kwargs.setdefault('name', self.get_unique_name(op.__name__))
         # Figure out the layer inputs.
-        if len(self.inputs)==0:
-            raise RuntimeError('No input variables found for layer %s.'%name)
-        elif len(self.inputs)==1:
+        if len(self.inputs) == 0:
+            raise RuntimeError('No input variables found for layer %s.' % name)
+        elif len(self.inputs) == 1:
             layer_input = self.inputs[0]
         else:
             layer_input = list(self.inputs)
@@ -38,7 +41,9 @@ def layer(op):
         self.feed(layer_output)
         # Return self for chained calls.
         return self
+
     return layer_decorated
+
 
 class Network(object):
     def __init__(self, inputs, trainable=True):
@@ -60,9 +65,9 @@ class Network(object):
                         try:
                             var = tf.get_variable(subkey)
                             session.run(var.assign(data_dict[key][subkey]))
-                            print "assign pretrain model "+subkey+ " to "+key
+                            print "assign pretrain model " + subkey + " to " + key
                         except ValueError:
-                            print "ignore "+key + " " + subkey
+                            print "ignore " + key + " " + subkey
                             if not ignore_missing:
                                 raise
 
@@ -74,9 +79,9 @@ class Network(object):
                         try:
                             var = tf.get_variable(subkey)
                             session.run(var.assign(data_dict[key][subkey]))
-                            print "assign pretrain model "+subkey+ " to "+key
+                            print "assign pretrain model " + subkey + " to " + key
                         except ValueError:
-                            print "ignore "+key + " " + subkey
+                            print "ignore " + key + " " + subkey
                             if not ignore_missing:
                                 raise
 
@@ -88,9 +93,9 @@ class Network(object):
                         try:
                             var = tf.get_variable(subkey)
                             session.run(var.assign(data_dict[key][subkey]))
-                            print "assign pretrain model "+subkey+ " to "+key
+                            print "assign pretrain model " + subkey + " to " + key
                         except ValueError:
-                            print "ignore "+key + " " + subkey
+                            print "ignore " + key + " " + subkey
                             if not ignore_missing:
                                 raise
 
@@ -102,9 +107,9 @@ class Network(object):
                         try:
                             var = tf.get_variable(subkey)
                             session.run(var.assign(data_dict[key][subkey]))
-                            print "assign pretrain model "+subkey+ " to "+key
+                            print "assign pretrain model " + subkey + " to " + key
                         except ValueError:
-                            print "ignore "+key + " " + subkey
+                            print "ignore " + key + " " + subkey
                             if not ignore_missing:
                                 raise
 
@@ -116,14 +121,14 @@ class Network(object):
                         try:
                             var = tf.get_variable(subkey)
                             session.run(var.assign(data_dict[key][subkey]))
-                            print "assign pretrain model "+subkey+ " to "+key
+                            print "assign pretrain model " + subkey + " to " + key
                         except ValueError:
-                            print "ignore "+key + " " + subkey
+                            print "ignore " + key + " " + subkey
                             if not ignore_missing:
                                 raise
 
     def feed(self, *args):
-        assert len(args)!=0
+        assert len(args) != 0
         self.inputs = []
         for layer in args:
             if isinstance(layer, basestring):
@@ -132,7 +137,7 @@ class Network(object):
                     print layer
                 except KeyError:
                     print self.layers.keys()
-                    raise KeyError('Unknown layer name fed: %s'%layer)
+                    raise KeyError('Unknown layer name fed: %s' % layer)
             self.inputs.append(layer)
         return self
 
@@ -141,12 +146,12 @@ class Network(object):
             layer = self.layers[layer]
         except KeyError:
             print self.layers.keys()
-            raise KeyError('Unknown layer name fed: %s'%layer)
+            raise KeyError('Unknown layer name fed: %s' % layer)
         return layer
 
     def get_unique_name(self, prefix):
-        id = sum(t.startswith(prefix) for t,_ in self.layers.items())+1
-        return '%s_%d'%(prefix, id)
+        id = sum(t.startswith(prefix) for t, _ in self.layers.items()) + 1
+        return '%s_%d' % (prefix, id)
 
     def make_var(self, name, shape, initializer=None, trainable=True, regularizer=None):
         return tf.get_variable(name, shape, initializer=initializer, trainable=trainable, regularizer=regularizer)
@@ -155,7 +160,8 @@ class Network(object):
         assert padding in ('SAME', 'VALID')
 
     @layer
-    def conv(self, input, k_h, k_w, c_o, s_h, s_w, name, reuse=False, biased=True,relu=True, padding=DEFAULT_PADDING, trainable=True):
+    def conv(self, input, k_h, k_w, c_o, s_h, s_w, name, reuse=False, biased=True, relu=True, padding=DEFAULT_PADDING,
+             trainable=True):
         """ contribution by miraclebiu, and biased option"""
         self.validate_padding(padding)
         c_i = input.get_shape()[-1]
@@ -163,8 +169,9 @@ class Network(object):
         with tf.variable_scope(name if reuse == False else '/'.join(name.split('/')[:-1])) as scope:
 
             # init_weights = tf.truncated_normal_initializer(0.0, stddev=0.001)
-            #init_weights = tf.contrib.layers.variance_scaling_initializer(factor=0.01, mode='FAN_AVG', uniform=False)
-            init_weights = tf.contrib.layers.variance_scaling_initializer(factor=2.0 if relu else 1.0, mode='FAN_IN', uniform=False if relu else True)
+            # init_weights = tf.contrib.layers.variance_scaling_initializer(factor=0.01, mode='FAN_AVG', uniform=False)
+            init_weights = tf.contrib.layers.variance_scaling_initializer(factor=2.0 if relu else 1.0, mode='FAN_IN',
+                                                                          uniform=False if relu else True)
             init_biases = tf.constant_initializer(0.0)
             kernel = self.make_var('weights', [k_h, k_w, c_i, c_o], init_weights, trainable, \
                                    regularizer=self.l2_regularizer(cfg.TRAIN.WEIGHT_DECAY))
@@ -188,8 +195,9 @@ class Network(object):
         return tf.image.resize_bilinear(input[0], [up_h, up_w], name=name)
 
     @layer
-    def upconv(self, input, shape, c_o, ksize=4, stride = 2, name = 'upconv', biased=False, relu=True, padding=DEFAULT_PADDING,
-             trainable=True):
+    def upconv(self, input, shape, c_o, ksize=4, stride=2, name='upconv', biased=False, relu=True,
+               padding=DEFAULT_PADDING,
+               trainable=True):
         """ up-conv"""
         self.validate_padding(padding)
 
@@ -198,8 +206,8 @@ class Network(object):
         if shape is None:
             # h = ((in_shape[1] - 1) * stride) + 1
             # w = ((in_shape[2] - 1) * stride) + 1
-            h = ((in_shape[1] ) * stride)
-            w = ((in_shape[2] ) * stride)
+            h = ((in_shape[1]) * stride)
+            w = ((in_shape[2]) * stride)
             new_shape = [in_shape[0], h, w, c_o]
         else:
             new_shape = [in_shape[0], shape[1], shape[2], c_o]
@@ -209,10 +217,11 @@ class Network(object):
 
         with tf.variable_scope(name) as scope:
             # init_weights = tf.truncated_normal_initializer(0.0, stddev=0.01)
-            #init_weights = tf.contrib.layers.variance_scaling_initializer(factor=0.01, mode='FAN_AVG', uniform=False)
-            init_weights = tf.contrib.layers.variance_scaling_initializer(factor=2.0 if relu else 1.0, mode='FAN_IN', uniform=False if relu else True)
+            # init_weights = tf.contrib.layers.variance_scaling_initializer(factor=0.01, mode='FAN_AVG', uniform=False)
+            init_weights = tf.contrib.layers.variance_scaling_initializer(factor=2.0 if relu else 1.0, mode='FAN_IN',
+                                                                          uniform=False if relu else True)
             filters = self.make_var('weights', filter_shape, init_weights, trainable, \
-                                   regularizer=self.l2_regularizer(cfg.TRAIN.WEIGHT_DECAY))
+                                    regularizer=self.l2_regularizer(cfg.TRAIN.WEIGHT_DECAY))
             deconv = tf.nn.conv2d_transpose(input, filters, output_shape,
                                             strides=[1, stride, stride, 1], padding=DEFAULT_PADDING, name=scope.name)
             # coz de-conv losses shape info, use reshape to re-gain shape
@@ -272,19 +281,19 @@ class Network(object):
     def fpn_roi_pool(self, input, pooled_height, pooled_width, name):
         # fake op, just parallel roi_pool and concat them
         # only use the first input
-        if isinstance(input[0], tuple): # P2
+        if isinstance(input[0], tuple):  # P2
             input[0] = input[0][0]
 
-        if isinstance(input[1], tuple): # P3
+        if isinstance(input[1], tuple):  # P3
             input[1] = input[1][0]
 
-        if isinstance(input[2], tuple): # P4
+        if isinstance(input[2], tuple):  # P4
             input[2] = input[2][0]
 
-        if isinstance(input[3], tuple): # P5
+        if isinstance(input[3], tuple):  # P5
             input[3] = input[3][0]
 
-        if isinstance(input[4], tuple): # P6
+        if isinstance(input[4], tuple):  # P6
             input[4] = input[4][0]
 
         '''
@@ -292,36 +301,36 @@ class Network(object):
             input[4] = input[4][0]
         '''
 
-
         print input
         with tf.variable_scope(name) as scope:
             roi_pool_P2 = roi_pool_op.roi_pool(input[0], input[5][0],
-                                    pooled_height,
-                                    pooled_width,
-                                    1.0 / 4.0,
-                                    name='roi_pool_P2')[0]
+                                               pooled_height,
+                                               pooled_width,
+                                               1.0 / 4.0,
+                                               name='roi_pool_P2')[0]
             roi_pool_P3 = roi_pool_op.roi_pool(input[1], input[5][1],
-                                    pooled_height,
-                                    pooled_width,
-                                    1.0 / 8.0,
-                                    name='roi_pool_P3')[0]
+                                               pooled_height,
+                                               pooled_width,
+                                               1.0 / 8.0,
+                                               name='roi_pool_P3')[0]
             roi_pool_P4 = roi_pool_op.roi_pool(input[2], input[5][2],
-                                    pooled_height,
-                                    pooled_width,
-                                    1.0 / 16.0,
-                                    name='roi_pool_P4')[0]
+                                               pooled_height,
+                                               pooled_width,
+                                               1.0 / 16.0,
+                                               name='roi_pool_P4')[0]
             roi_pool_P5 = roi_pool_op.roi_pool(input[3], input[5][3],
-                                    pooled_height,
-                                    pooled_width,
-                                    1.0 / 32.0,
-                                    name='roi_pool_P5')[0]
+                                               pooled_height,
+                                               pooled_width,
+                                               1.0 / 32.0,
+                                               name='roi_pool_P5')[0]
             roi_pool_P6 = roi_pool_op.roi_pool(input[4], input[5][4],
-                                    pooled_height,
-                                    pooled_width,
-                                    1.0 / 64.0,
-                                    name='roi_pool_P6')[0]
+                                               pooled_height,
+                                               pooled_width,
+                                               1.0 / 64.0,
+                                               name='roi_pool_P6')[0]
 
-            return tf.concat(axis=0, values=[roi_pool_P2, roi_pool_P3, roi_pool_P4, roi_pool_P5, roi_pool_P6], name='roi_pool_concat')
+            return tf.concat(axis=0, values=[roi_pool_P2, roi_pool_P3, roi_pool_P4, roi_pool_P5, roi_pool_P6],
+                             name='roi_pool_concat')
 
     @layer
     def proposal_layer(self, input, _feat_strides, anchor_sizes, cfg_key, name):
@@ -336,32 +345,39 @@ class Network(object):
             # 'rpn_cls_prob_reshape/P5', 'rpn_bbox_pred/P5',
             # 'im_info'
             with tf.variable_scope(name) as scope:
-                return tf.reshape(tf.py_func(proposal_layer_py,\
-                                     [input[0], input[1],\
-                                      input[2], input[3],\
-                                      input[4], input[5],\
-                                      input[6], input[7],\
-                                      input[8], input[9],\
-                                      input[10], cfg_key, _feat_strides, anchor_sizes],\
-                                     [tf.float32]),\
-                                     [-1,5], name = 'rpn_rois')
+                return tf.reshape(tf.py_func(proposal_layer_py, \
+                                             [input[0], input[1], \
+                                              input[2], input[3], \
+                                              input[4], input[5], \
+                                              input[6], input[7], \
+                                              input[8], input[9], \
+                                              input[10], cfg_key, _feat_strides, anchor_sizes], \
+                                             [tf.float32]), \
+                                  [-1, 5], name='rpn_rois')
 
         with tf.variable_scope(name) as scope:
-            rpn_rois_P2, rpn_rois_P3, rpn_rois_P4, rpn_rois_P5, rpn_rois_P6, rpn_rois = tf.py_func(proposal_layer_py,\
-                                                        [input[0], input[1],\
-                                                         input[2], input[3],\
-                                                         input[4], input[5],\
-                                                         input[6], input[7],\
-                                                         input[8], input[9],\
-                                                         input[10], cfg_key, _feat_strides, anchor_sizes],\
-                                                         [tf.float32, tf.float32, tf.float32, tf.float32, tf.float32, tf.float32]);
+            rpn_rois_P2, rpn_rois_P3, rpn_rois_P4, rpn_rois_P5, rpn_rois_P6, rpn_rois = tf.py_func(proposal_layer_py, \
+                                                                                                   [input[0], input[1], \
+                                                                                                    input[2], input[3], \
+                                                                                                    input[4], input[5], \
+                                                                                                    input[6], input[7], \
+                                                                                                    input[8], input[9], \
+                                                                                                    input[10], cfg_key,
+                                                                                                    _feat_strides,
+                                                                                                    anchor_sizes], \
+                                                                                                   [tf.float32,
+                                                                                                    tf.float32,
+                                                                                                    tf.float32,
+                                                                                                    tf.float32,
+                                                                                                    tf.float32,
+                                                                                                    tf.float32]);
 
-            rpn_rois_P2 = tf.reshape(rpn_rois_P2, [-1, 5], name = 'rpn_rois_P2') # shape is (1 x H(P) x W(P) x A(P), 5)
-            rpn_rois_P3 = tf.reshape(rpn_rois_P3, [-1, 5], name = 'rpn_rois_P3') # shape is (1 x H(P) x W(P) x A(P), 5)
-            rpn_rois_P4 = tf.reshape(rpn_rois_P4, [-1, 5], name = 'rpn_rois_P4') # shape is (1 x H(P) x W(P) x A(P), 5)
-            rpn_rois_P5 = tf.reshape(rpn_rois_P5, [-1, 5], name = 'rpn_rois_P5') # shape is (1 x H(P) x W(P) x A(P), 5)
-            rpn_rois_P6 = tf.reshape(rpn_rois_P6, [-1, 5], name = 'rpn_rois_P6') # shape is (1 x H(P) x W(P) x A(P), 5)
-            rpn_rois    = tf.reshape(rpn_rois, [-1, 5], name = 'rpn_rois') # shape is (1 x H(P) x W(P) x A(P), 5)
+            rpn_rois_P2 = tf.reshape(rpn_rois_P2, [-1, 5], name='rpn_rois_P2')  # shape is (1 x H(P) x W(P) x A(P), 5)
+            rpn_rois_P3 = tf.reshape(rpn_rois_P3, [-1, 5], name='rpn_rois_P3')  # shape is (1 x H(P) x W(P) x A(P), 5)
+            rpn_rois_P4 = tf.reshape(rpn_rois_P4, [-1, 5], name='rpn_rois_P4')  # shape is (1 x H(P) x W(P) x A(P), 5)
+            rpn_rois_P5 = tf.reshape(rpn_rois_P5, [-1, 5], name='rpn_rois_P5')  # shape is (1 x H(P) x W(P) x A(P), 5)
+            rpn_rois_P6 = tf.reshape(rpn_rois_P6, [-1, 5], name='rpn_rois_P6')  # shape is (1 x H(P) x W(P) x A(P), 5)
+            rpn_rois = tf.reshape(rpn_rois, [-1, 5], name='rpn_rois')  # shape is (1 x H(P) x W(P) x A(P), 5)
 
             self.layers['rois'] = rpn_rois
 
@@ -374,16 +390,20 @@ class Network(object):
 
         with tf.variable_scope(name) as scope:
             # 'rpn_cls_score', 'gt_boxes', 'gt_ishard', 'dontcare_areas', 'im_info'
-            rpn_labels,rpn_bbox_targets,rpn_bbox_inside_weights,rpn_bbox_outside_weights = \
+            rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights = \
                 tf.py_func(anchor_target_layer_py,
-                           [input[0],input[1],input[2],input[3],input[4],input[5],input[6],input[7],input[8], _feat_strides, anchor_sizes],
-                           [tf.float32,tf.float32,tf.float32,tf.float32])
+                           [input[0], input[1], input[2], input[3], input[4], input[5], input[6], input[7], input[8],
+                            _feat_strides, anchor_sizes],
+                           [tf.float32, tf.float32, tf.float32, tf.float32])
 
-            rpn_labels = tf.convert_to_tensor(tf.cast(rpn_labels,tf.int32), name = 'rpn_labels') # shape is (1 x H x W x A, 2)
-            rpn_bbox_targets = tf.convert_to_tensor(rpn_bbox_targets, name = 'rpn_bbox_targets') # shape is (1 x H x W x A, 4)
-            rpn_bbox_inside_weights = tf.convert_to_tensor(rpn_bbox_inside_weights , name = 'rpn_bbox_inside_weights') # shape is (1 x H x W x A, 4)
-            rpn_bbox_outside_weights = tf.convert_to_tensor(rpn_bbox_outside_weights , name = 'rpn_bbox_outside_weights') # shape is (1 x H x W x A, 4)
-
+            rpn_labels = tf.convert_to_tensor(tf.cast(rpn_labels, tf.int32),
+                                              name='rpn_labels')  # shape is (1 x H x W x A, 2)
+            rpn_bbox_targets = tf.convert_to_tensor(rpn_bbox_targets,
+                                                    name='rpn_bbox_targets')  # shape is (1 x H x W x A, 4)
+            rpn_bbox_inside_weights = tf.convert_to_tensor(rpn_bbox_inside_weights,
+                                                           name='rpn_bbox_inside_weights')  # shape is (1 x H x W x A, 4)
+            rpn_bbox_outside_weights = tf.convert_to_tensor(rpn_bbox_outside_weights,
+                                                            name='rpn_bbox_outside_weights')  # shape is (1 x H x W x A, 4)
 
             return rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights
 
@@ -414,28 +434,28 @@ class Network(object):
         if isinstance(input[0], tuple):
             input[0] = input[0][0]
         with tf.variable_scope(name) as scope:
-            #inputs: 'rpn_rois','gt_boxes', 'gt_ishard', 'dontcare_areas'
-            rois_P2,rois_P3,rois_P4,rois_P5,rois_P6,labels,bbox_targets,bbox_inside_weights,bbox_outside_weights,rois \
+            # inputs: 'rpn_rois','gt_boxes', 'gt_ishard', 'dontcare_areas'
+            rois_P2, rois_P3, rois_P4, rois_P5, rois_P6, labels, bbox_targets, bbox_inside_weights, bbox_outside_weights, rois \
                 = tf.py_func(proposal_target_layer_py,
-                             [input[0],input[1],input[2],input[3],classes],
-                             [tf.float32,tf.float32,tf.float32,tf.float32,tf.float32,tf.float32,tf.float32,tf.float32,tf.float32,tf.float32])
+                             [input[0], input[1], input[2], input[3], classes],
+                             [tf.float32, tf.float32, tf.float32, tf.float32, tf.float32, tf.float32, tf.float32,
+                              tf.float32, tf.float32, tf.float32])
             # rois_Px <- (1 x H x W x A(x), 5) e.g. [0, x1, y1, x2, y2]
             # rois = tf.convert_to_tensor(rois, name='rois')
-            rois = tf.reshape(rois, [-1, 5], name='rois') # goes to roi_pooling
-            rois_P2 = tf.reshape(rois_P2, [-1, 5], name='rois_P2') # goes to roi_pooling
-            rois_P3 = tf.reshape(rois_P3, [-1, 5], name='rois_P3') # goes to roi_pooling
-            rois_P4 = tf.reshape(rois_P4, [-1, 5], name='rois_P4') # goes to roi_pooling
-            rois_P5 = tf.reshape(rois_P5, [-1, 5], name='rois_P5') # goes to roi_pooling
-            rois_P6 = tf.reshape(rois_P6, [-1, 5], name='rois_P6') # goes to roi_pooling
-            labels = tf.convert_to_tensor(tf.cast(labels,tf.int32), name = 'labels') # goes to FRCNN loss
-            bbox_targets = tf.convert_to_tensor(bbox_targets, name = 'bbox_targets') # goes to FRCNN loss
-            bbox_inside_weights = tf.convert_to_tensor(bbox_inside_weights, name = 'bbox_inside_weights')
-            bbox_outside_weights = tf.convert_to_tensor(bbox_outside_weights, name = 'bbox_outside_weights')
+            rois = tf.reshape(rois, [-1, 5], name='rois')  # goes to roi_pooling
+            rois_P2 = tf.reshape(rois_P2, [-1, 5], name='rois_P2')  # goes to roi_pooling
+            rois_P3 = tf.reshape(rois_P3, [-1, 5], name='rois_P3')  # goes to roi_pooling
+            rois_P4 = tf.reshape(rois_P4, [-1, 5], name='rois_P4')  # goes to roi_pooling
+            rois_P5 = tf.reshape(rois_P5, [-1, 5], name='rois_P5')  # goes to roi_pooling
+            rois_P6 = tf.reshape(rois_P6, [-1, 5], name='rois_P6')  # goes to roi_pooling
+            labels = tf.convert_to_tensor(tf.cast(labels, tf.int32), name='labels')  # goes to FRCNN loss
+            bbox_targets = tf.convert_to_tensor(bbox_targets, name='bbox_targets')  # goes to FRCNN loss
+            bbox_inside_weights = tf.convert_to_tensor(bbox_inside_weights, name='bbox_inside_weights')
+            bbox_outside_weights = tf.convert_to_tensor(bbox_outside_weights, name='bbox_outside_weights')
 
             self.layers['rois'] = rois
 
             return rois_P2, rois_P3, rois_P4, rois_P5, rois_P6, labels, bbox_targets, bbox_inside_weights, bbox_outside_weights, rois
-
 
     '''
     @layer
@@ -471,11 +491,11 @@ class Network(object):
     def spatial_reshape_layer(self, input, d, name):
         input_shape = tf.shape(input)
         # transpose: (1, H, W, A x d) -> (1, H, WxA, d)
-        return tf.reshape(input,\
-                               [input_shape[0],\
-                                input_shape[1], \
-                                -1,\
-                                int(d)])
+        return tf.reshape(input, \
+                          [input_shape[0], \
+                           input_shape[1], \
+                           -1, \
+                           int(d)])
 
     @layer
     def concat(self, inputs, axis, name):
@@ -493,7 +513,7 @@ class Network(object):
                 dim = 1
                 for d in input_shape[1:].as_list():
                     dim *= d
-                feed_in = tf.reshape(tf.transpose(input,[0,3,1,2]), [-1, dim])
+                feed_in = tf.reshape(tf.transpose(input, [0, 3, 1, 2]), [-1, dim])
             else:
                 feed_in, dim = (input, int(input_shape[-1]))
 
@@ -506,7 +526,8 @@ class Network(object):
                 init_biases = tf.constant_initializer(0.0)
             '''
 
-            init_weights = tf.contrib.layers.variance_scaling_initializer(factor=2.0 if relu else 1.0, mode='FAN_IN', uniform=False if relu else True)
+            init_weights = tf.contrib.layers.variance_scaling_initializer(factor=2.0 if relu else 1.0, mode='FAN_IN',
+                                                                          uniform=False if relu else True)
             init_biases = tf.constant_initializer(0.0)
 
             weights = self.make_var('weights', [dim, num_out], init_weights, trainable, \
@@ -521,9 +542,10 @@ class Network(object):
     def softmax(self, input, name):
         input_shape = tf.shape(input)
         if name == 'rpn_cls_prob':
-            return tf.reshape(tf.nn.softmax(tf.reshape(input,[-1,input_shape[3]])),[-1,input_shape[1],input_shape[2],input_shape[3]],name=name)
+            return tf.reshape(tf.nn.softmax(tf.reshape(input, [-1, input_shape[3]])),
+                              [-1, input_shape[1], input_shape[2], input_shape[3]], name=name)
         else:
-            return tf.nn.softmax(input,name=name)
+            return tf.nn.softmax(input, name=name)
 
     @layer
     def spatial_softmax(self, input, name):
@@ -533,23 +555,23 @@ class Network(object):
                           [-1, input_shape[1], input_shape[2], input_shape[3]], name=name)
 
     @layer
-    def add(self,input,name):
+    def add(self, input, name):
         """contribution by miraclebiu"""
-        return tf.add(input[0],input[1], name=name)
+        return tf.add(input[0], input[1], name=name)
 
     @layer
-    def batch_normalization(self,input,name,relu=True, is_training=False):
+    def batch_normalization(self, input, name, relu=True, is_training=False):
         """contribution by miraclebiu"""
         if relu:
-            temp_layer=tf.contrib.layers.batch_norm(input,scale=True,center=True,is_training=is_training,scope=name)
+            temp_layer = tf.contrib.layers.batch_norm(input, scale=True, center=True, is_training=is_training,
+                                                      scope=name)
             return tf.nn.relu(temp_layer)
         else:
-            return tf.contrib.layers.batch_norm(input,scale=True,center=True,is_training=is_training,scope=name)
+            return tf.contrib.layers.batch_norm(input, scale=True, center=True, is_training=is_training, scope=name)
 
     @layer
     def scale(self, input, c_in, name):
         with tf.variable_scope(name) as scope:
-
             alpha = tf.get_variable('alpha', shape=[c_in, ], dtype=tf.float32,
                                     initializer=tf.constant_initializer(1.0), trainable=True,
                                     regularizer=self.l2_regularizer(0.00001))
@@ -566,14 +588,15 @@ class Network(object):
         def regularizer(tensor):
             with tf.name_scope(scope, default_name='l2_regularizer', values=[tensor]):
                 l2_weight = tf.convert_to_tensor(weight_decay,
-                                       dtype=tensor.dtype.base_dtype,
-                                       name='weight_decay')
+                                                 dtype=tensor.dtype.base_dtype,
+                                                 name='weight_decay')
                 return tf.multiply(l2_weight, tf.nn.l2_loss(tensor), name='value')
+
         return regularizer
 
     def smooth_l1_dist(self, deltas, sigma2=3.0, name='smooth_l1_dist'):
         with tf.name_scope(name=name) as scope:
             deltas_abs = tf.abs(deltas)
-            smoothL1_sign = tf.cast(tf.less(deltas_abs, 1.0/sigma2), tf.float32)
+            smoothL1_sign = tf.cast(tf.less(deltas_abs, 1.0 / sigma2), tf.float32)
             return tf.square(deltas) * 0.5 * sigma2 * smoothL1_sign + \
-                        (deltas_abs - 0.5 / sigma2) * tf.abs(smoothL1_sign - 1)
+                   (deltas_abs - 0.5 / sigma2) * tf.abs(smoothL1_sign - 1)

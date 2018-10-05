@@ -18,15 +18,16 @@ from ..fast_rcnn.config import cfg
 # <<<< obsolete
 from ..utils.blob import prep_im_for_blob, im_list_to_blob
 
+
 def get_minibatch(roidb, num_classes):
     """Given a roidb, construct a minibatch sampled from it."""
     num_images = len(roidb)
     # Sample random scales to use for each image in this batch
     random_scale_inds = npr.randint(0, high=len(cfg.TRAIN.SCALES),
                                     size=num_images)
-    assert(cfg.TRAIN.BATCH_SIZE % num_images == 0), \
+    assert (cfg.TRAIN.BATCH_SIZE % num_images == 0), \
         'num_images ({}) must divide BATCH_SIZE ({})'. \
-        format(num_images, cfg.TRAIN.BATCH_SIZE)
+            format(num_images, cfg.TRAIN.BATCH_SIZE)
     rois_per_image = cfg.TRAIN.BATCH_SIZE / num_images
     fg_rois_per_image = np.round(cfg.TRAIN.FG_FRACTION * rois_per_image)
 
@@ -44,7 +45,7 @@ def get_minibatch(roidb, num_classes):
         gt_boxes[:, 0:4] = roidb[0]['boxes'][gt_inds, :] * im_scales[0]
         gt_boxes[:, 4] = roidb[0]['gt_classes'][gt_inds]
         blobs['gt_boxes'] = gt_boxes
-        blobs['gt_ishard'] = roidb[0]['gt_ishard'][gt_inds]  \
+        blobs['gt_ishard'] = roidb[0]['gt_ishard'][gt_inds] \
             if 'gt_ishard' in roidb[0] else np.zeros(gt_inds.size, dtype=int)
         # blobs['gt_ishard'] = roidb[0]['gt_ishard'][gt_inds]
         blobs['dontcare_areas'] = roidb[0]['dontcare_areas'] * im_scales[0] \
@@ -54,7 +55,7 @@ def get_minibatch(roidb, num_classes):
             dtype=np.float32)
         blobs['im_name'] = os.path.basename(roidb[0]['image'])
 
-    else: # not using RPN
+    else:  # not using RPN
         # Now, build the region of interest and label blobs
         rois_blob = np.zeros((0, 5), dtype=np.float32)
         labels_blob = np.zeros((0), dtype=np.float32)
@@ -85,7 +86,7 @@ def get_minibatch(roidb, num_classes):
         def calc_level(width, height):
             return min(6, max(2, int(4 + np.log2(np.sqrt(width * height) / 224))))
 
-        level = lambda roi : calc_level(roi[3] - roi[1], roi[4] - roi[2])   # roi: [0, x0, y0, x1, y1]
+        level = lambda roi: calc_level(roi[3] - roi[1], roi[4] - roi[2])  # roi: [0, x0, y0, x1, y1]
 
         rois = rois_blob
         labels = labels_blob
@@ -128,6 +129,7 @@ def get_minibatch(roidb, num_classes):
 
     return blobs
 
+
 def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
     """Generate a random sample of RoIs comprising foreground and background
     examples.
@@ -145,7 +147,7 @@ def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
     # Sample foreground regions without replacement
     if fg_inds.size > 0:
         fg_inds = npr.choice(
-                fg_inds, size=fg_rois_per_this_image, replace=False)
+            fg_inds, size=fg_rois_per_this_image, replace=False)
 
     # Select background RoIs as those within [BG_THRESH_LO, BG_THRESH_HI)
     bg_inds = np.where((overlaps < cfg.TRAIN.BG_THRESH_HI) &
@@ -158,7 +160,7 @@ def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
     # Sample foreground regions without replacement
     if bg_inds.size > 0:
         bg_inds = npr.choice(
-                bg_inds, size=bg_rois_per_this_image, replace=False)
+            bg_inds, size=bg_rois_per_this_image, replace=False)
 
     # The indices that we're selecting (both fg and bg)
     keep_inds = np.append(fg_inds, bg_inds)
@@ -170,9 +172,10 @@ def _sample_rois(roidb, fg_rois_per_image, rois_per_image, num_classes):
     rois = rois[keep_inds]
 
     bbox_targets, bbox_inside_weights = _get_bbox_regression_labels(
-            roidb['bbox_targets'][keep_inds, :], num_classes)
+        roidb['bbox_targets'][keep_inds, :], num_classes)
 
     return labels, overlaps, rois, bbox_targets, bbox_inside_weights
+
 
 def _get_image_blob(roidb, scale_inds):
     """Builds an input blob from the images in the roidb at the specified
@@ -196,10 +199,12 @@ def _get_image_blob(roidb, scale_inds):
 
     return blob, im_scales
 
+
 def _project_im_rois(im_rois, im_scale_factor):
     """Project image RoIs into the rescaled training image."""
     rois = im_rois * im_scale_factor
     return rois
+
 
 def _get_bbox_regression_labels(bbox_target_data, num_classes):
     """Bounding-box regression targets are stored in a compact form in the
@@ -225,6 +230,7 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes):
         bbox_inside_weights[ind, start:end] = cfg.TRAIN.BBOX_INSIDE_WEIGHTS
     return bbox_targets, bbox_inside_weights
 
+
 def _vis_minibatch(im_blob, rois_blob, labels_blob, overlaps):
     """Visualize a mini-batch for debugging."""
     import matplotlib.pyplot as plt
@@ -243,5 +249,5 @@ def _vis_minibatch(im_blob, rois_blob, labels_blob, overlaps):
             plt.Rectangle((roi[0], roi[1]), roi[2] - roi[0],
                           roi[3] - roi[1], fill=False,
                           edgecolor='r', linewidth=3)
-            )
+        )
         plt.show()

@@ -8,7 +8,8 @@
 # --------------------------------------------------------
 
 """Test a Fast R-CNN network on an image database."""
-import sys,os
+import sys, os
+
 this_dir = os.path.dirname(__file__)
 sys.path.insert(0, this_dir + '/..')
 from lib.fast_rcnn.test import test_net
@@ -19,6 +20,7 @@ import argparse
 import pprint
 import time
 import tensorflow as tf
+
 
 def parse_args():
     """
@@ -53,6 +55,7 @@ def parse_args():
 
     args = parser.parse_args()
     return args
+
 
 if __name__ == '__main__':
     args = parse_args()

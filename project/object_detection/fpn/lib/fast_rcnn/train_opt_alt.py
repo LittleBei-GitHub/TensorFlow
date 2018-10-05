@@ -26,9 +26,11 @@ from ..utils.blob import im_list_to_blob
 # >>>> obsolete, because it depends on sth outside of this project
 from ..fast_rcnn.config import cfg
 from ..fast_rcnn.bbox_transform import clip_boxes, bbox_transform_inv
+
 # <<<< obsolete
 
 _DEBUG = False
+
 
 class SolverWrapper(object):
     """A simple wrapper around Caffe's solver.
@@ -43,12 +45,11 @@ class SolverWrapper(object):
         self.imdb_name = imdb_name
 
         roidb, imdb = get_roidb(self.imdb_name)
-        #imdb = get_imdb(self.imdb_name)
+        # imdb = get_imdb(self.imdb_name)
         self.logdir = get_log_dir(imdb)
         self.writer = tf.summary.FileWriter(logdir=self.logdir,
-                                             graph=tf.get_default_graph(),
-                                             flush_secs=5)
-
+                                            graph=tf.get_default_graph(),
+                                            flush_secs=5)
 
         print 'Computing bounding-box regression targets...'
         self.bbox_means, self.bbox_stds = rdl_roidb.add_bbox_regression_targets(roidb)
@@ -63,7 +64,7 @@ class SolverWrapper(object):
         self.lr = tf.Variable(cfg.TRAIN.LEARNING_RATE, trainable=False)
         momentum = cfg.TRAIN.MOMENTUM
         self.opt = tf.train.MomentumOptimizer(self.lr, momentum)
-        #self.opt = tf.train.GradientDescentOptimizer(self.lr)
+        # self.opt = tf.train.GradientDescentOptimizer(self.lr)
 
     def snapshot(self, sess, iter, output_dir):
         """Take a snapshot of the network after unnormalizing the learned
@@ -83,7 +84,7 @@ class SolverWrapper(object):
 
             # scale and shift with bbox reg unnormalization; then save snapshot
             weights_shape = weights.get_shape().as_list()
-            sess.run(weights.assign(orig_0 * np.tile(self.bbox_stds, (weights_shape[0],1))))
+            sess.run(weights.assign(orig_0 * np.tile(self.bbox_stds, (weights_shape[0], 1))))
             sess.run(biases.assign(orig_1 * self.bbox_stds + self.bbox_means))
 
         if not os.path.exists(output_dir):
@@ -92,7 +93,7 @@ class SolverWrapper(object):
         infix = ('_' + cfg.TRAIN.SNAPSHOT_INFIX
                  if cfg.TRAIN.SNAPSHOT_INFIX != '' else '')
         filename = (cfg.TRAIN.SNAPSHOT_PREFIX + infix +
-                    '_iter_{:d}'.format(iter+1) + '.ckpt')
+                    '_iter_{:d}'.format(iter + 1) + '.ckpt')
         filename = os.path.join(output_dir, filename)
 
         self.saver.save(sess, filename)
@@ -148,7 +149,7 @@ class SolverWrapper(object):
             sess.run(tf.global_variables_initializer())
             try:
                 print ('Loading pretrained model '
-                   'weights from {:s}').format(init_model)
+                       'weights from {:s}').format(init_model)
                 self.net.load(init_model, sess, True)
             except:
                 raise 'Check your pretrained model {:s}'.format(init_model)
@@ -167,7 +168,6 @@ class SolverWrapper(object):
         init_new_vars_op = tf.variables_initializer(uninitialized_vars)
         sess.run(init_new_vars_op)
 
-
         last_snapshot_iter = -1
         timer = Timer()
         for iter in xrange(max_iter):
@@ -180,7 +180,7 @@ class SolverWrapper(object):
             # get one batch
             blobs = data_layer.forward()
 
-            feed_dict={
+            feed_dict = {
                 self.net.data: blobs['data'],
                 self.net.im_info: blobs['im_info'],
                 self.net.gt_boxes: blobs['gt_boxes'],
@@ -201,12 +201,12 @@ class SolverWrapper(object):
             _diff_time = timer.toc(average=False)
 
             if (iter) % (cfg.TRAIN.DISPLAY) == 0:
-                print 'iter: %d / %d, total loss: %.4f, rpn_loss_cls: %.4f, rpn_loss_box: %.4f, lr: %.10f'%\
-                        (iter, max_iter, rpn_loss_cls_value + rpn_loss_box_value,\
-                         rpn_loss_cls_value, rpn_loss_box_value, self.lr.eval())
+                print 'iter: %d / %d, total loss: %.4f, rpn_loss_cls: %.4f, rpn_loss_box: %.4f, lr: %.10f' % \
+                      (iter, max_iter, rpn_loss_cls_value + rpn_loss_box_value, \
+                       rpn_loss_cls_value, rpn_loss_box_value, self.lr.eval())
                 print 'speed: {:.3f}s / iter'.format(_diff_time)
 
-            if (iter+1) % cfg.TRAIN.SNAPSHOT_ITERS == 0:
+            if (iter + 1) % cfg.TRAIN.SNAPSHOT_ITERS == 0:
                 last_snapshot_iter = iter
                 self.snapshot(sess, iter, output_dir)
 
@@ -217,7 +217,7 @@ class SolverWrapper(object):
         """Use a trained RPN to generate proposals.
         """
 
-        cfg.TRAIN.RPN_PRE_NMS_TOP_N = -1     # no pre NMS filtering
+        cfg.TRAIN.RPN_PRE_NMS_TOP_N = -1  # no pre NMS filtering
         cfg.TRAIN.RPN_POST_NMS_TOP_N = 2000  # limit top boxes after NMS
         print('Using config:')
         pprint.pprint(cfg)
@@ -237,7 +237,7 @@ class SolverWrapper(object):
                 blobs = {}
                 blobs['data'], blobs['im_info'] = _get_image_blob(im)
 
-                feed_dict={
+                feed_dict = {
                     self.net.data: blobs['data'],
                     self.net.im_info: blobs['im_info'],
                 }
@@ -256,7 +256,7 @@ class SolverWrapper(object):
                 imdb_boxes[i] = im_proposals(sess, im)
                 _t.toc()
                 print 'im_proposals: {:d}/{:d} {:.3f}s' \
-                      .format(i + 1, imdb.num_images, _t.average_time)
+                    .format(i + 1, imdb.num_images, _t.average_time)
 
             return imdb_boxes
 
@@ -275,9 +275,9 @@ class SolverWrapper(object):
         """Train a Fast R-CNN using proposals generated by an RPN.
         """
 
-        cfg.TRAIN.HAS_RPN = False           # not generating prosals on-the-fly
+        cfg.TRAIN.HAS_RPN = False  # not generating prosals on-the-fly
         cfg.TRAIN.BBOX_REG = True
-        cfg.TRAIN.PROPOSAL_METHOD = 'rpn'   # use pre-computed RPN proposals instead
+        cfg.TRAIN.PROPOSAL_METHOD = 'rpn'  # use pre-computed RPN proposals instead
         cfg.TRAIN.IMS_PER_BATCH = 2
         cfg.TRAIN.STEPSIZE = 30000
         print 'Init model: {}'.format(init_model)
@@ -321,7 +321,7 @@ class SolverWrapper(object):
             sess.run(tf.global_variables_initializer())
             try:
                 print ('Loading pretrained model '
-                   'weights from {:s}').format(init_model)
+                       'weights from {:s}').format(init_model)
                 self.net.load(init_model, sess, True)
             except:
                 raise 'Check your pretrained model {:s}'.format(init_model)
@@ -340,7 +340,6 @@ class SolverWrapper(object):
         init_new_vars_op = tf.variables_initializer(uninitialized_vars)
         sess.run(init_new_vars_op)
 
-
         last_snapshot_iter = -1
         timer = Timer()
         for iter in xrange(max_iter):
@@ -353,7 +352,7 @@ class SolverWrapper(object):
             # get one batch
             blobs = data_layer.forward()
 
-            feed_dict={
+            feed_dict = {
                 self.net.data: blobs['data'],
                 self.net.leveled_rois_0: blobs['leveled_rois_0'],
                 self.net.leveled_rois_1: blobs['leveled_rois_1'],
@@ -364,7 +363,7 @@ class SolverWrapper(object):
                 self.net.bbox_targets: blobs['bbox_targets'],
                 self.net.bbox_inside_weights: blobs['bbox_inside_weights'],
                 self.net.bbox_outside_weights: blobs['bbox_outside_weights'],
-                #self.net.roi_data: blobs['roi-data'],
+                # self.net.roi_data: blobs['roi-data'],
             }
 
             fetch_list = [cross_entropy,
@@ -380,12 +379,12 @@ class SolverWrapper(object):
             _diff_time = timer.toc(average=False)
 
             if (iter) % (cfg.TRAIN.DISPLAY) == 0:
-                print 'iter: %d / %d, total loss: %.4f, loss_cls: %.4f, loss_box: %.4f, lr: %.10f'%\
-                        (iter, max_iter, loss_cls_value + loss_box_value,\
-                         loss_cls_value, loss_box_value, self.lr.eval())
+                print 'iter: %d / %d, total loss: %.4f, loss_cls: %.4f, loss_box: %.4f, lr: %.10f' % \
+                      (iter, max_iter, loss_cls_value + loss_box_value, \
+                       loss_cls_value, loss_box_value, self.lr.eval())
                 print 'speed: {:.3f}s / iter'.format(_diff_time)
 
-            if (iter+1) % cfg.TRAIN.SNAPSHOT_ITERS == 0:
+            if (iter + 1) % cfg.TRAIN.SNAPSHOT_ITERS == 0:
                 last_snapshot_iter = iter
                 self.snapshot(sess, iter, output_dir)
 
@@ -408,7 +407,7 @@ class SolverWrapper(object):
         print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
 
         rpn_file_stage1 = self.rpn_generate(sess, cfg.TRAIN.SNAPSHOT_INFIX)
-        #rpn_file_stage1 = 'output/FPN_alt_opt/voc_0712_trainval/stage1_RPN_proposals.pkl'
+        # rpn_file_stage1 = 'output/FPN_alt_opt/voc_0712_trainval/stage1_RPN_proposals.pkl'
 
         print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
         print 'Stage 1 Fast R-CNN using RPN proposals, init from ImageNet model'
@@ -416,7 +415,8 @@ class SolverWrapper(object):
 
         cfg.TRAIN.SNAPSHOT_INFIX = 'stage1_Fast_RCNN'
 
-        self.train_fast_rcnn(sess, vs_names[1], max_iters[1], rpn_file = rpn_file_stage1, init_model=self.pretrained_model)
+        self.train_fast_rcnn(sess, vs_names[1], max_iters[1], rpn_file=rpn_file_stage1,
+                             init_model=self.pretrained_model)
 
         print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
         print 'Stage 2 RPN, init from stage 1 Fast R-CNN model'
@@ -440,6 +440,7 @@ class SolverWrapper(object):
 
         self.train_fast_rcnn(sess, vs_names[3], max_iters[3], rpn_file=rpn_file_stage2)
 
+
 def get_roidb(imdb_name, rpn_file=None):
     imdb = get_imdb(imdb_name)
     print 'Loaded dataset `{:s}` for training'.format(imdb.name)
@@ -449,6 +450,7 @@ def get_roidb(imdb_name, rpn_file=None):
         imdb.config['rpn_file'] = rpn_file
     roidb = get_training_roidb(imdb)
     return roidb, imdb
+
 
 def get_training_roidb(imdb):
     """Returns a roidb (Region of Interest database) for use in training."""
@@ -462,6 +464,7 @@ def get_training_roidb(imdb):
     print 'done'
 
     return imdb.roidb
+
 
 def _get_image_blob(im):
     """Converts an image into a network input.
@@ -497,6 +500,7 @@ def _get_image_blob(im):
     blob = im_list_to_blob(processed_ims)
 
     return blob, im_info
+
 
 def train_net(network, imdb_name, vs_names, pretrained_model=None, max_iters=[80000, 40000, 80000, 40000]):
     """Train a Fast R-CNN network."""

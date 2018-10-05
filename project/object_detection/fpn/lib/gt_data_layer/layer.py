@@ -21,6 +21,8 @@ from .minibatch import get_minibatch
 # TODO: make fast_rcnn irrelevant
 # >>>> obsolete, because it depends on sth outside of this project
 from ..fast_rcnn.config import cfg
+
+
 # <<<< obsolete
 
 class GtDataLayer(caffe.Layer):
@@ -93,8 +95,8 @@ class GtDataLayer(caffe.Layer):
         # parameters blob
         num_scale = len(cfg.TRAIN.SCALES)
         num_aspect = len(cfg.TRAIN.ASPECTS)
-        top[2].reshape(2 + 2*num_scale + 2*num_aspect)
-            
+        top[2].reshape(2 + 2 * num_scale + 2 * num_aspect)
+
     def forward(self, bottom, top):
         """Get blobs and copy them into this layer's top blob vector."""
         blobs = self._get_next_minibatch()

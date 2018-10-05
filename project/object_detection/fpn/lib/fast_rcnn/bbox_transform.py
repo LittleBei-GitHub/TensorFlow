@@ -8,6 +8,7 @@
 import numpy as np
 import warnings
 
+
 def bbox_transform(ex_rois, gt_rois):
     """
     computes the distance from ground-truth boxes to the given boxes, normed by their size
@@ -39,6 +40,7 @@ def bbox_transform(ex_rois, gt_rois):
     targets = np.vstack(
         (targets_dx, targets_dy, targets_dw, targets_dh)).transpose()
     return targets
+
 
 def bbox_transform_inv(boxes, deltas):
     if boxes.shape[0] == 0:
@@ -72,6 +74,7 @@ def bbox_transform_inv(boxes, deltas):
     pred_boxes[:, 3::4] = pred_ctr_y + 0.5 * pred_h
 
     return pred_boxes
+
 
 def clip_boxes(boxes, im_shape):
     """

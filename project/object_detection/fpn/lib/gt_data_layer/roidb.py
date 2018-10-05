@@ -20,6 +20,8 @@ from ..utils.boxes_grid import get_boxes_grid
 # TODO: make fast_rcnn irrelevant
 # >>>> obsolete, because it depends on sth outside of this project
 from ..fast_rcnn.config import cfg
+
+
 # <<<< obsolete
 
 
@@ -53,15 +55,15 @@ def prepare_roidb(imdb):
         image_height = s[1]
         image_width = s[0]
         boxes_grid, cx, cy = get_boxes_grid(image_height, image_width)
-        
+
         # for each scale
         for scale_ind, scale in enumerate(cfg.TRAIN.SCALES):
             boxes_rescaled = boxes * scale
 
             # compute overlap
             overlaps = bbox_overlaps(boxes_grid.astype(np.float), boxes_rescaled.astype(np.float))
-            max_overlaps = overlaps.max(axis = 1)
-            argmax_overlaps = overlaps.argmax(axis = 1)
+            max_overlaps = overlaps.max(axis=1)
+            argmax_overlaps = overlaps.argmax(axis=1)
             max_classes = labels[argmax_overlaps]
 
             # select positive boxes
@@ -72,7 +74,7 @@ def prepare_roidb(imdb):
             if len(fg_inds) > 0:
                 gt_inds = argmax_overlaps[fg_inds]
                 # bounding box regression targets
-                gt_targets = _compute_targets(boxes_grid[fg_inds,:], boxes_rescaled[gt_inds,:])
+                gt_targets = _compute_targets(boxes_grid[fg_inds, :], boxes_rescaled[gt_inds, :])
                 # scale mapping for RoI pooling
                 scale_ind_map = cfg.TRAIN.SCALE_MAPPING[scale_ind]
                 scale_map = cfg.TRAIN.SCALES[scale_ind_map]
@@ -82,9 +84,9 @@ def prepare_roidb(imdb):
                 info_box[:, 0] = cx[fg_inds]
                 info_box[:, 1] = cy[fg_inds]
                 info_box[:, 2] = scale_ind
-                info_box[:, 3:7] = boxes_grid[fg_inds,:]
+                info_box[:, 3:7] = boxes_grid[fg_inds, :]
                 info_box[:, 7] = scale_ind_map
-                info_box[:, 8:12] = boxes_grid[fg_inds,:] * scale_map / scale
+                info_box[:, 8:12] = boxes_grid[fg_inds, :] * scale_map / scale
                 info_box[:, 12] = labels[gt_inds]
                 info_box[:, 14:] = gt_targets
                 info_boxes = np.vstack((info_boxes, info_box))
@@ -94,6 +96,7 @@ def prepare_roidb(imdb):
     with open(cache_file, 'wb') as fid:
         cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
     print 'wrote gt roidb prepared to {}'.format(cache_file)
+
 
 def add_bbox_regression_targets(roidb):
     """Add information needed to train bounding-box regressors."""
@@ -133,6 +136,7 @@ def add_bbox_regression_targets(roidb):
     # These values will be needed for making predictions
     # (the predicts will need to be unnormalized and uncentered)
     return means.ravel(), stds.ravel()
+
 
 def _compute_targets(ex_rois, gt_rois):
     """Compute bounding-box regression targets for an image. The targets are scale invariance"""

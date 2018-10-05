@@ -16,9 +16,11 @@ from ..utils.cython_bbox import bbox_overlaps, bbox_intersections
 # >>>> obsolete, because it depends on sth outside of this project
 from ..fast_rcnn.config import cfg
 from ..fast_rcnn.bbox_transform import bbox_transform
+
 # <<<< obsolete
 
 DEBUG = False
+
 
 def proposal_target_layer(rpn_rois, gt_boxes, gt_ishard, dontcare_areas, _num_classes):
     """
@@ -61,11 +63,11 @@ def proposal_target_layer(rpn_rois, gt_boxes, gt_ishard, dontcare_areas, _num_cl
     jittered_gt_boxes = _jitter_gt_boxes(gt_easyboxes)
     zeros = np.zeros((gt_easyboxes.shape[0] * 2, 1), dtype=gt_easyboxes.dtype)
     all_rois = np.vstack((all_rois, \
-         np.hstack((zeros, np.vstack((gt_easyboxes[:, :-1], jittered_gt_boxes[:, :-1]))))))
+                          np.hstack((zeros, np.vstack((gt_easyboxes[:, :-1], jittered_gt_boxes[:, :-1]))))))
 
     # Sanity check: single batch only
     assert np.all(all_rois[:, 0] == 0), \
-            'Only single item batches are supported'
+        'Only single item batches are supported'
 
     num_images = 1
     rois_per_image = cfg.TRAIN.BATCH_SIZE / num_images
@@ -90,24 +92,25 @@ def proposal_target_layer(rpn_rois, gt_boxes, gt_ishard, dontcare_areas, _num_cl
     #     print 'num bg avg: {}'.format(_bg_num / _count)
     #     print 'ratio: {:.3f}'.format(float(_fg_num) / float(_bg_num))
 
-    #print 'num gt: {}'.format(gt_boxes.shape[0])
-    #print 'num fg: {}'.format((labels > 0).sum())
-    #print 'num bg: {}'.format((labels == 0).sum())
+    # print 'num gt: {}'.format(gt_boxes.shape[0])
+    # print 'num fg: {}'.format((labels > 0).sum())
+    # print 'num bg: {}'.format((labels == 0).sum())
 
     rois = rois.reshape(-1, 5)
     labels = labels.reshape(-1, 1)
-    bbox_targets = bbox_targets.reshape(-1, _num_classes*4)
-    bbox_inside_weights = bbox_inside_weights.reshape(-1, _num_classes*4)
+    bbox_targets = bbox_targets.reshape(-1, _num_classes * 4)
+    bbox_inside_weights = bbox_inside_weights.reshape(-1, _num_classes * 4)
 
-    #bbox_outside_weights = np.array(bbox_inside_weights > 0).astype(np.float32)
+    # bbox_outside_weights = np.array(bbox_inside_weights > 0).astype(np.float32)
     bbox_outside_weights = np.array(bbox_inside_weights > 0).astype(np.float32) / (np.sum(labels >= 0) + 1.0)
-    #bbox_outside_weights = np.array(bbox_inside_weights > 0).astype(np.float32) / (np.sum(labels >  0) + 1.0)
+
+    # bbox_outside_weights = np.array(bbox_inside_weights > 0).astype(np.float32) / (np.sum(labels >  0) + 1.0)
 
     # assign rois to level Pk    (P2 ~ P6)
     def calc_level(width, height):
         return min(6, max(2, int(4 + np.log2(np.sqrt(width * height) / 224))))
 
-    level = lambda roi : calc_level(roi[3] - roi[1], roi[4] - roi[2])   # roi: [0, x0, y0, x1, y1]
+    level = lambda roi: calc_level(roi[3] - roi[1], roi[4] - roi[2])  # roi: [0, x0, y0, x1, y1]
 
     leveled_rois = [None] * 5
     leveled_labels = [None] * 5
@@ -133,7 +136,8 @@ def proposal_target_layer(rpn_rois, gt_boxes, gt_ishard, dontcare_areas, _num_cl
     bbox_outside_weights = np.concatenate(leveled_bbox_outside_weights, axis=0)
 
     return leveled_rois[0], leveled_rois[1], leveled_rois[2], leveled_rois[3], leveled_rois[4], \
-            labels, bbox_targets, bbox_inside_weights, bbox_outside_weights, rois
+           labels, bbox_targets, bbox_inside_weights, bbox_outside_weights, rois
+
 
 def _sample_rois(all_rois, gt_boxes, gt_ishard, dontcare_areas, fg_rois_per_image, rois_per_image, num_classes):
     """Generate a random sample of RoIs comprising foreground and background
@@ -143,12 +147,12 @@ def _sample_rois(all_rois, gt_boxes, gt_ishard, dontcare_areas, fg_rois_per_imag
     overlaps = bbox_overlaps(
         np.ascontiguousarray(all_rois[:, 1:5], dtype=np.float),
         np.ascontiguousarray(gt_boxes[:, :4], dtype=np.float))
-    gt_assignment = overlaps.argmax(axis=1) # R
-    max_overlaps = overlaps.max(axis=1) # R
+    gt_assignment = overlaps.argmax(axis=1)  # R
+    max_overlaps = overlaps.max(axis=1)  # R
     labels = gt_boxes[gt_assignment, 4]
 
     # preclude hard samples
-    ignore_inds = np.empty(shape = (0), dtype=int)
+    ignore_inds = np.empty(shape=(0), dtype=int)
     if cfg.TRAIN.PRECLUDE_HARD_SAMPLES and gt_ishard is not None and gt_ishard.shape[0] > 0:
         gt_ishard = gt_ishard.astype(int)
         gt_hardboxes = gt_boxes[gt_ishard == 1, :]
@@ -157,7 +161,7 @@ def _sample_rois(all_rois, gt_boxes, gt_ishard, dontcare_areas, fg_rois_per_imag
             hard_overlaps = bbox_overlaps(
                 np.ascontiguousarray(all_rois[:, 1:5], dtype=np.float),
                 np.ascontiguousarray(gt_hardboxes[:, :4], dtype=np.float))
-            hard_max_overlaps = hard_overlaps.max(axis=1) # R x 1
+            hard_max_overlaps = hard_overlaps.max(axis=1)  # R x 1
             # hard_gt_assignment = hard_overlaps.argmax(axis=0)  # H
             ignore_inds = np.append(ignore_inds, \
                                     np.where(hard_max_overlaps >= cfg.TRAIN.FG_THRESH)[0])
@@ -225,6 +229,7 @@ def _sample_rois(all_rois, gt_boxes, gt_ishard, dontcare_areas, fg_rois_per_imag
 
     return labels, rois, bbox_targets, bbox_inside_weights
 
+
 def _get_bbox_regression_labels(bbox_target_data, num_classes):
     """Bounding-box regression targets (bbox_target_data) are stored in a
     compact form N x (class, tx, ty, tw, th)
@@ -261,9 +266,10 @@ def _compute_targets(ex_rois, gt_rois, labels):
     if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
         # Optionally normalize targets by a precomputed mean and stdev
         targets = ((targets - np.array(cfg.TRAIN.BBOX_NORMALIZE_MEANS))
-                / np.array(cfg.TRAIN.BBOX_NORMALIZE_STDS))
+                   / np.array(cfg.TRAIN.BBOX_NORMALIZE_STDS))
     return np.hstack(
-            (labels[:, np.newaxis], targets)).astype(np.float32, copy=False)
+        (labels[:, np.newaxis], targets)).astype(np.float32, copy=False)
+
 
 def _jitter_gt_boxes(gt_boxes, jitter=0.05):
     """ jitter the gtboxes, before adding them into rois, to be more robust for cls and rgs
