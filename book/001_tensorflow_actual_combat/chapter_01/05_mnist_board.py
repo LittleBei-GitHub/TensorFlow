@@ -10,7 +10,7 @@ NUM_CLASSES = 10
 IMAGE_SIZE = 28
 IMAGE_PIXELS = IMAGE_SIZE * IMAGE_SIZE
 
-batch_size=50
+batch_size = 50
 
 hidden1_units = 20
 hidden2_units = 10
@@ -110,23 +110,22 @@ def evaluation(logits, labels):
     return tf.reduce_sum(tf.cast(correct, tf.int32))
 
 
-if __name__=='__main__':
-
+if __name__ == '__main__':
     ##input
     with tf.name_scope('input'):
-        X=tf.placeholder(tf.float32, shape=[batch_size, IMAGE_PIXELS], name='images')
+        X = tf.placeholder(tf.float32, shape=[batch_size, IMAGE_PIXELS], name='images')
         # 标签没有被one-hot
-        Y=tf.placeholder(tf.int32, shape=[batch_size], name='labels')
+        Y = tf.placeholder(tf.int32, shape=[batch_size], name='labels')
     ## 输出层
-    logits=inference(images=X, hidden1_units=hidden1_units, hidden2_units=hidden2_units)
+    logits = inference(images=X, hidden1_units=hidden1_units, hidden2_units=hidden2_units)
     ## 损失值
-    cross_entropy=loss(logits, Y)
+    cross_entropy = loss(logits, Y)
     ## 训练
-    train=training(loss=cross_entropy, learning_rate=learning_rate)
+    train = training(loss=cross_entropy, learning_rate=learning_rate)
     ## 评估
-    eval=evaluation(logits, Y)
+    eval = evaluation(logits, Y)
 
     ## 保存计算图
-    writer=tf.summary.FileWriter(logdir='../logs', graph=tf.get_default_graph())
+    writer = tf.summary.FileWriter(logdir='../logs', graph=tf.get_default_graph())
     writer.flush()
     writer.close()

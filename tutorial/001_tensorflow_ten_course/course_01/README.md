@@ -1,3 +1,4 @@
 # 环境搭建
-  * Python
-  * TensorFlow
+
+* Python
+* TensorFlow

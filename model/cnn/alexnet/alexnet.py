@@ -4,22 +4,22 @@ import os
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 
-INPUT_NODE=784
-IMAGE_SIZE=28
-IMAGE_SIZE=28
-NUM_CHANNELS=3
-KEEP_PROB=0.7
-NUM_CLASSES=10
-LEARNING_RATE=0.01
+INPUT_NODE = 784
+IMAGE_SIZE = 28
+IMAGE_SIZE = 28
+NUM_CHANNELS = 3
+NUM_CLASSES = 10
+LEARNING_RATE = 0.01
 
-BATCH_SIZE=64
-TRAINING_STEPS=100
+BATCH_SIZE = 64
+TRAINING_STEPS = 100
 
 # 模型保存的路径和文件名
 MODEL_SAVE_PATH = "./model/"
 MODEL_NAME = "model.ckpt"
 
 mnist = input_data.read_data_sets("../dataset/mnist/", one_hot=True)
+
 
 def conv(x, filter_height, filter_width, num_channels, num_filters, stride_y, stride_x, name,
          padding='SAME'):
@@ -31,10 +31,10 @@ def conv(x, filter_height, filter_width, num_channels, num_filters, stride_y, st
                                                                        num_filters],
                                                                 stddev=0.1),
                               dtype=tf.float32,
-                              name=scope+'_weights')
+                              name=scope + '_weights')
         biases = tf.Variable(initial_value=tf.constant(value=0.0,
                                                        shape=[num_filters]),
-                             name=scope+'_biases',
+                             name=scope + '_biases',
                              dtype=tf.float32)
         conv = tf.nn.conv2d(input=x,
                             filter=weights,
@@ -42,8 +42,9 @@ def conv(x, filter_height, filter_width, num_channels, num_filters, stride_y, st
                             padding=padding,
                             name=scope)
         conv_out = tf.nn.relu(features=tf.nn.bias_add(value=conv, bias=biases),
-                              name=scope+'_out')
+                              name=scope + '_out')
         return conv_out
+
 
 def fc(x, num_in, num_out, name, active=True):
     """全连接操作"""
@@ -59,10 +60,11 @@ def fc(x, num_in, num_out, name, active=True):
                              dtype=tf.float32)
         full = tf.nn.xw_plus_b(x=x, weights=weights, biases=biases, name=scope)
         if active:
-            full_out = tf.nn.relu(features=full, name=scope+'_out')
+            full_out = tf.nn.relu(features=full, name=scope + '_out')
             return full_out
         else:
             return full
+
 
 def max_pool(x, filter_height, filter_width, stride_y, stride_x, name,
              padding='SAME'):
@@ -74,6 +76,7 @@ def max_pool(x, filter_height, filter_width, stride_y, stride_x, name,
                               padding=padding,
                               name=scope)
 
+
 def lrn(x, radius, alpha, beta, name, bias=1.0):
     """局部响应归一化操作"""
     with tf.name_scope(name) as scope:
@@ -83,6 +86,8 @@ def lrn(x, radius, alpha, beta, name, bias=1.0):
                                                   beta=beta,
                                                   bias=bias,
                                                   name=scope)
+
+
 def dropout(x, keep_prob, name):
     """dropout操作"""
     with tf.name_scope(name) as scope:
@@ -91,7 +96,7 @@ def dropout(x, keep_prob, name):
                              name=scope)
 
 
-def inference(images):
+def inference(images, keep_prob):
     """前向推断"""
     # 1st Layer: Conv (w ReLu) -> Lrn -> Pool
     with tf.name_scope('layer1'):
@@ -122,19 +127,20 @@ def inference(images):
     with tf.name_scope('layer6'):
         flattened = tf.reshape(pool5, [-1, 6 * 6 * 256])
         fc6 = fc(flattened, 6 * 6 * 256, 4096, name='fc6')
-        dropout6 = dropout(x=fc6, keep_prob=KEEP_PROB, name='fc6_dropout')
+        dropout6 = dropout(x=fc6, keep_prob=keep_prob, name='fc6_dropout')
 
     # 7th Layer: FC (w ReLu) -> Dropout
     with tf.name_scope('layer7'):
         fc7 = fc(dropout6, 4096, 4096, name='fc7')
-        dropout7 = dropout(fc7, KEEP_PROB, name='fc7_dropout')
+        dropout7 = dropout(x=fc7, keep_prob=keep_prob, name='fc7_dropout')
 
     # 8th Layer: FC and return unscaled activations
     with tf.name_scope('layer8'):
         fc8 = fc(dropout7, 4096, NUM_CLASSES, name='fc8', active=False)
     return fc8
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     ## 变量的输入
     with tf.name_scope('Inputs'):
         x_images = tf.placeholder(
@@ -148,10 +154,11 @@ if __name__=='__main__':
             dtype=tf.float32,
             shape=[None, NUM_CLASSES],
             name='Y')
+        keep_prob = tf.placeholder(dtype=tf.float32, name='keep_prob')
 
     ## 前向推断
     with tf.name_scope('Inference'):
-        y_hat = inference(images=x)
+        y_hat = inference(images=x, keep_prob=keep_prob)
 
     ## 计算损失
     with tf.name_scope('Loss'):
@@ -184,16 +191,18 @@ if __name__=='__main__':
         for epoch in range(TRAINING_STEPS):
             for i in range(total_batches):
                 batch_x, batch_y = mnist.train.next_batch(BATCH_SIZE)
-                _, step = sess.run([train_op, global_step], feed_dict={x_images: batch_x, y: batch_y})
+                _, step = sess.run([train_op, global_step], feed_dict={x_images: batch_x, y: batch_y, keep_prob: 0.5})
                 # 每100轮保存一次模型。
                 if step % 100 == 0:
-                    train_loss, train_eval = sess.run([loss, accuracy], feed_dict={x_images: batch_x, y: batch_y})
+                    train_loss, train_eval = sess.run([loss, accuracy],
+                                                      feed_dict={x_images: batch_x, y: batch_y, keep_prob: 1.0})
                     print(str(step) + '训练集损失：' + str(train_loss))
                     print(str(step) + '训练集评估：' + str(train_eval))
 
                     validation_loss, validation_eval = sess.run([loss, accuracy],
                                                                 feed_dict={x_images: mnist.validation.images,
-                                                                           y: mnist.validation.labels})
+                                                                           y: mnist.validation.labels,
+                                                                           keep_prob: 1.0})
                     print(str(step) + '验证集损失：' + str(validation_loss))
                     print(str(step) + '验证集评估：' + str(validation_eval))
 
