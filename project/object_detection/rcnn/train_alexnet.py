@@ -1,6 +1,6 @@
 from __future__ import division, print_function, absolute_import
 import pickle
-import numpy as np 
+import numpy as np
 from PIL import Image
 import os.path
 
@@ -43,7 +43,7 @@ def load_data(datafile, num_clss, save=False, save_path='dataset.pkl'):
         加载数据集
     """
     # 打开存放训练数据文件名的文件
-    train_list = open(datafile,'r')
+    train_list = open(datafile, 'r')
     # 标签
     labels = []
     # 图片
@@ -60,7 +60,7 @@ def load_data(datafile, num_clss, save=False, save_path='dataset.pkl'):
         # 获取图片索引
         index = int(tmp[1])
         label = np.zeros(num_clss)
-        label[index] = 1   # 转成one-hot编码的格式
+        label[index] = 1  # 转成one-hot编码的格式
         labels.append(label)
     # 持久化到文件中
     if save:
@@ -73,7 +73,7 @@ def load_from_pkl(dataset_file):
         从pickle文件中加载数据集
     """
     X, Y = pickle.load(open(dataset_file, 'rb'))
-    return X,Y
+    return X, Y
 
 
 def create_alexnet(num_classes):
@@ -112,15 +112,15 @@ def train(network, X, Y):
     model = tflearn.DNN(network, checkpoint_path='model_alexnet',
                         max_checkpoints=1, tensorboard_verbose=2, tensorboard_dir='output')
     if os.path.isfile('model_save.model'):
-    	model.load('model_save.model')
+        model.load('model_save.model')
     model.fit(X, Y, n_epoch=100, validation_set=0.1, shuffle=True,
               show_metric=True, batch_size=64, snapshot_step=200,
-              snapshot_epoch=False, run_id='alexnet_oxflowers17') # epoch = 1000
+              snapshot_epoch=False, run_id='alexnet_oxflowers17')  # epoch = 1000
     # Save the model
     model.save('model_save.model')
 
 
-def predict(network, modelfile,images):
+def predict(network, modelfile, images):
     """
         预测
     """
@@ -131,6 +131,6 @@ def predict(network, modelfile,images):
 
 if __name__ == '__main__':
     X, Y = load_data('train_list.txt', 17)
-    #X, Y = load_from_pkl('dataset.pkl')
+    # X, Y = load_from_pkl('dataset.pkl')
     net = create_alexnet(17)
-    train(net,X,Y)
+    train(net, X, Y)

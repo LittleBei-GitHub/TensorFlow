@@ -61,7 +61,7 @@ def fine_tune_Alexnet(network, X, Y):
     model.fit(X, Y, n_epoch=10, validation_set=0.1, shuffle=True,
               show_metric=True, batch_size=64, snapshot_step=200,
               snapshot_epoch=False, run_id='alexnet_rcnnflowers2')  # epoch = 1000
-    # Save the model
+    # 保存模型
     model.save('fine_tune_model_save.model')
 
 
