@@ -8,6 +8,7 @@ import numpy as np
 import math
 import sys
 import matplotlib
+
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
@@ -71,7 +72,7 @@ def show_rect(img_path, regions, test_index):
         cv2.putText(img, message + ': ' + str(round(score, 2)), (xmin + 5, ymin - 20), font, 1, (255, 255, 255), 2)
     if not os.path.exists(cfg.Test_output):
         os.makedirs(cfg.Test_output)
-    out_path = os.path.join(cfg.Test_output, test_index+'test.jpg')
+    out_path = os.path.join(cfg.Test_output, test_index + 'test.jpg')
     cv2.imwrite(out_path, img, [int(cv2.IMWRITE_PNG_COMPRESSION), 1])
     plt.imshow(img)
     plt.show()
@@ -84,10 +85,13 @@ class data(object):
         self.valid_list = cfg.Valid_list
         self.annotation_path = cfg.Annotation_path
         self.images_path = cfg.Images_path
+        # 数据集标签存放路径
         self.processed_path = cfg.Processed_path
 
         self.classes = cfg.Classes
+        # 类别数量包括背景类
         self.class_num = cfg.Class_num
+        # 将真实类别和类别标签之间的映射
         self.class_to_ind = dict(zip(self.classes, range(1, len(self.classes) + 1)))
         self.image_w = cfg.Image_w
         self.image_h = cfg.Image_h
@@ -95,13 +99,13 @@ class data(object):
         self.is_save = is_save
         self.batch_size = cfg.Batch_size
         self.roi_threshold = cfg.Roi_threshold
-        self.train_images_index = []
+        self.train_images_index = []  # 训练数据索引列表，相当于存储图片名
         self.cursor = 0
         self.epoch = 0
 
         if not os.path.exists(self.processed_path):
             os.makedirs(self.processed_path)
-
+        # 如果标签数据不存在，则生成标签数据
         if len(os.listdir(self.processed_path)) == 0:
             self.generate_labels()
 
@@ -121,16 +125,22 @@ class data(object):
                 # 使用select search算法获取感兴趣区域
                 img_lbl, regions = selectivesearch.selective_search(img, scale=1000, sigma=0.9, min_size=1000)
                 labels = []
+                # 对每个感兴趣区域
                 for r in regions:
                     x, y, w, h = r['rect']
                     proposal_vertice = [x + 1, y, x + w, y + h, w, h]
                     proposal_bbox = [x, y, (x + w - 1), (y + h - 1)]
-                    label = np.zeros(self.class_num * 5 - 4, dtype=np.float32)  # 假设包括背景有5类，0：5是判断类别，5：5+4*4=21 是位置框信息
-                    iou_val=0
+
+                    # 对每个建议框设置标签
+                    # 假设包括背景有5类，0：5是判断类别，5：5+4*4=21 是位置框信息
+                    label = np.zeros(self.class_num * 5 - 4, dtype=np.float32)
+                    iou_val = 0
+                    # 遍历每一个ground truth
                     for ground_truth, class_idx in ground_truth_dic.items():
-                        # ground_truth = list(ground_truth)
-                        xmin = (2*ground_truth[0]-ground_truth[2])/2.0
-                        ymin = (2*ground_truth[1]-ground_truth[3])/2.0
+                        # 计算ground truth左上脚的坐标点
+                        xmin = (2 * ground_truth[0] - ground_truth[2]) / 2.0
+                        ymin = (2 * ground_truth[1] - ground_truth[3]) / 2.0
+                        # ground truth左上角坐标点以及宽和高
                         ground_truth = [xmin, ymin, ground_truth[2], ground_truth[3]]
                         # 计算iou分数
                         iou_val = IOU(ground_truth, proposal_bbox)
@@ -146,12 +156,12 @@ class data(object):
 
                         # 判断阈值
                         if iou_val < self.roi_threshold:
-                            label[0] = 1
+                            label[0] = 1  # 表示背景
                         elif iou_val > self.roi_threshold:
-                            label[0] = 0
-                            label[class_idx] = 1
-                            # 构造坐标标签
-                            label[self.class_num + (class_idx-1)*4: self.class_num + (class_idx-1)*4 + 4] = \
+                            label[0] = 0  # 表示前景
+                            label[class_idx] = 1  # 在类别索引对应的位置赋值为1
+                            # 构造坐标标签，并计算边框偏移量
+                            label[self.class_num + (class_idx - 1) * 4: self.class_num + (class_idx - 1) * 4 + 4] = \
                                 [((gx - px) / pw), ((gy - py) / ph), (np.log(gw / pw)), (np.log(gh / ph))]
                             break
                     for i in range(len(proposal_bbox)):
@@ -159,7 +169,7 @@ class data(object):
                     proposal_bbox.insert(0, 0)
                     proposal_bbox.insert(0, iou_val)
                     proposal_bbox.extend(label)
-                    # proposal_bbox中包括:iou值、在图中的坐标位置、类别标签、与真实坐标的差值
+                    # proposal_bbox中包括:iou值、建议框的坐标信息、类别标签、与真实坐标的差值
                     labels.append(proposal_bbox)
                 # 显示处理进度
                 view_bar("Process image of %s" % image_path, num + 1, len(lines))
@@ -192,8 +202,9 @@ class data(object):
             if class_name != 'left':
                 # 获取该类别的索引
                 cls_ind = self.class_to_ind[obj.find('name').text.lower().strip()]
-                # x_center, y_center, w, h
+                # 获取真实区域的中心点坐标以及宽和高
                 boxes = [(x2 + x1) / 2.0, (y2 + y1) / 2.0, x2 - x1, y2 - y1]
+                # 对每个真实区域标记类别
                 labels[tuple(boxes)] = cls_ind
         return labels
 
@@ -208,7 +219,7 @@ class data(object):
                 for line in f.readlines():
                     image_index = line.strip()
                     self.train_images_index.append(image_index)
-                # 混淆
+                # 混淆训练数据索引
                 np.random.shuffle(self.train_images_index)
 
         images = []
@@ -218,18 +229,21 @@ class data(object):
         for i in range(self.batch_size):
             # 获取读片完整路径
             images_path = os.path.join(self.images_path, self.train_images_index[self.cursor] + '.jpg')
+            # 读取一张图片
             image = cv2.imread(images_path)
+            # 将取出的图片放入图片列表
             images.append(image)
             # 从本地读取该图片的labels
             labels = np.load(os.path.join(self.processed_path, self.train_images_index[self.cursor] + '_data.npy'))
-            # 对labels进行倒序排序
+            # 依据labels中的IoU对labels进行降序排序
             labels = sorted(labels.tolist(), reverse=True)
             # 取最小的一个值限制感兴趣区域的个数
             select_num = min(cfg.Roi_num, len(labels))
-            
+
             for rois_label in labels[0:select_num]:
                 rois.append(
-                        [rois_label[1] + i, int(rois_label[2])-1, int(rois_label[3])-1, int(rois_label[4])+1, int(rois_label[5])+1])
+                    [rois_label[1] + i, int(rois_label[2]) - 1, int(rois_label[3]) - 1, int(rois_label[4]) + 1,
+                     int(rois_label[5]) + 1])
                 label.append((rois_label[6:]))
             # 记录的游标加1
             self.cursor += 1
@@ -237,9 +251,11 @@ class data(object):
                 self.cursor = 0
                 self.epoch += 1
                 np.random.shuffle(self.train_images_index)
-        # 数据格式转换
+        # 建议区域边框信息
         rois = np.array(rois)
+        # 分类标签和回归标签信息
         label = np.array(label)
+        # 图片
         images = np.array(images)
         return images, rois, label
 

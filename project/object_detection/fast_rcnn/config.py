@@ -1,4 +1,3 @@
-import os
 All_list = r'./Data/all_list.txt'
 Train_list = r'./Data/train_list.txt'
 Valid_list = r'./Data/valid_list.txt'
@@ -9,12 +8,12 @@ Processed_path = r'./Data/Processed'
 Weights_file = r'./train_alexnet/Alexnet'
 
 Classes = ['bus']
-Class_num = 2  #因为有背景在 所以比Classes多一项
+Class_num = 2  # 因为有背景在 所以比Classes多一项
 Image_w = 1600
 Image_h = 1200
-Roi_num = 600  #防止候选框太多所做的限定,在我的项目里我取的是合格框数量（150）的4倍
+Roi_num = 600  # 防止候选框太多所做的限定,在我的项目里我取的是合格框数量（150）的4倍
 
-Batch_size = 1
+Batch_size = 1 # 批量大小为1，每次处理一张图片
 Max_iter = 100000
 Summary_iter = 10
 Save_iter = 500

@@ -2,26 +2,32 @@ import tensorflow as tf
 from tensorflow.python.ops import nn_ops
 import config as cfg
 from roi_pooling.roi_pooling_ops import roi_pooling
+
 slim = tf.contrib.slim
 
 
 class Alexnet(object):
-    def __init__(self,  is_training=True):
+    def __init__(self, is_training=True):
         self.is_training = is_training
         self.regularizer = tf.contrib.layers.l2_regularizer(0.0005)  # l2正则化
         self.class_num = cfg.Class_num
         self.image_w = cfg.Image_w
         self.image_h = cfg.Image_h
         self.batch_size = cfg.Batch_size  # 批处理大小
+        # 输入图片
         if is_training:
             self.images = tf.placeholder(tf.float32, [self.batch_size, self.image_h, self.image_w, 3], name='input')
         else:
             self.images = tf.placeholder(tf.float32, [1, self.image_h, self.image_w, 3], name='test_input')
+        # 输入感兴趣区域
         self.rois = tf.placeholder(tf.int32, [None, 5], name='rois')
+        # 构建网络
         self.logits, self.bbox = self.build_network(self.images, self.class_num, self.is_training)
         if is_training:
-            self.labels = tf.placeholder(tf.float32, [None, self.class_num*5-4], name='labels')
+            # 分类标签和回归标签占位符
+            self.labels = tf.placeholder(tf.float32, [None, self.class_num * 5 - 4], name='labels')
             self.loss_layer(self.logits, self.labels, self.bbox)
+            # 获取所有的损失
             self.total_loss = tf.losses.get_total_loss()
             tf.summary.scalar('total-loss', self.total_loss)
 
@@ -45,25 +51,25 @@ class Alexnet(object):
                             weights_initializer=tf.truncated_normal_initializer(0.0, 0.01),
                             weights_regularizer=slim.l2_regularizer(0.0005)):
             flatten = slim.flatten(self.roi_pool6, scope='flat_32')
-            self.fc1 = slim.fully_connected(flatten, 4096,  scope='fc_6')
-            drop6 = slim.dropout(self.fc1, keep_prob=keep_prob, is_training=is_training, scope='dropout6',)
-            self.fc2 = slim.fully_connected(drop6,  4096,  scope='fc_7')
+            self.fc1 = slim.fully_connected(flatten, 4096, scope='fc_6')
+            drop6 = slim.dropout(self.fc1, keep_prob=keep_prob, is_training=is_training, scope='dropout6', )
+            self.fc2 = slim.fully_connected(drop6, 4096, scope='fc_7')
             drop7 = slim.dropout(self.fc2, keep_prob=keep_prob, is_training=is_training, scope='dropout7')
             # 分类
             cls = slim.fully_connected(drop7, class_num, activation_fn=nn_ops.softmax, scope='fc_8')
             # 回归
-            bbox = slim.fully_connected(drop7, (self.class_num-1)*4,
+            bbox = slim.fully_connected(drop7, (self.class_num - 1) * 4,
                                         weights_initializer=tf.truncated_normal_initializer(0.0, 0.001),
                                         activation_fn=None, scope='fc_9')
         return cls, bbox
 
     def maxPoolLayer(self, x, kHeight, kWidth, strideX, strideY, name, padding="SAME"):
         return tf.nn.max_pool(x, ksize=[1, kHeight, kWidth, 1],
-                          strides=[1, strideX, strideY, 1], padding=padding, name=name)
+                              strides=[1, strideX, strideY, 1], padding=padding, name=name)
 
     def LRN(self, x, R, alpha, beta, name=None, bias=1.0):
         return tf.nn.local_response_normalization(x, depth_radius=R, alpha=alpha,
-                                              beta=beta, bias=bias, name=name)
+                                                  beta=beta, bias=bias, name=name)
 
     def convLayer(self, x, kHeight, kWidth, strideX, strideY,
                   featureNum, name, padding="SAME", groups=1):  # group为2时等于AlexNet中分上下两部分
@@ -85,9 +91,13 @@ class Alexnet(object):
         """
             损失函数
         """
+        # 类别预测标签
         cls_pred = y_pred
+        # 类别真实标签
         cls_true = y_true[:, :self.class_num]
+        # 边框预测标签
         bbox_pred = box_pred
+        # 边框真实标签
         bbox_ture = y_true[:, self.class_num:]
         # 分类损失
         cls_pred /= tf.reduce_sum(cls_pred, reduction_indices=len(cls_pred.get_shape()) - 1, keep_dims=True)
@@ -97,7 +107,7 @@ class Alexnet(object):
         tf.losses.add_loss(cls_loss)
         tf.summary.scalar('class-loss', cls_loss)
         # 回归损失
-        mask = tf.tile(tf.reshape(cls_true[:, 1], [-1, 1]), [1, 4])
+        mask = tf.tile(tf.reshape(cls_true[:, 1], [-1, 1]), [1, 4])  # tf.tile() 对张量进行赋值
         for cls_idx in range(2, self.class_num):
             mask = tf.concat([mask, tf.tile(tf.reshape(cls_true[:, int(cls_idx)], [-1, 1]), [1, 4])], 1)
         bbox_sub = tf.square(mask * (bbox_pred - bbox_ture))
